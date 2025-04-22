@@ -1,5 +1,6 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment (lib, "Dbghelp.lib")
 #include <windows.h>
 #include<cstdint>
 #include <string>
@@ -10,6 +11,29 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <cassert>
+#include<dbghelp.h>
+#include<strsafe.h>
+
+static LONG WINAPI ExposrtDump(EXCEPTION_POINTERS* exception)
+{
+	SYSTEMTIME time;
+	GetLocalTime(&time);
+	wchar_t filePath[MAX_PATH] = { 0 };
+	CreateDirectory(L"./Dumps", nullptr);
+	StringCchPrintfW(filePath, MAX_PATH, L"./Dumps/%04d-%02d%02d-%02d%02d.dmp", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute);
+	HANDLE dumpFilehandle = CreateFile(filePath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
+
+	DWORD processId = GetCurrentProcessId();
+	DWORD threadId = GetCurrentThreadId();
+
+	MINIDUMP_EXCEPTION_INFORMATION minidumpInformation{ 0 };
+	minidumpInformation.ThreadId = threadId;
+	minidumpInformation.ExceptionPointers = exception;
+	minidumpInformation.ClientPointers = TRUE;
+
+	MiniDumpWriteDump(GetCurrentProcess(), processId, dumpFilehandle,MiniDumpNormal, &minidumpInformation, nullptr, nullptr);
+	return EXCEPTION_EXECUTE_HANDLER;
+}
 
 void Log(std::ostream& os, const std::string& message)
 {
@@ -59,8 +83,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg,
 
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
+
+	SetUnhandledExceptionFilter(ExposrtDump);
+	uint32_t* p = nullptr;
+	*p = 100;
+
 	//log出力用のフォルダ[logs]作成
 	std::filesystem::create_directory("logs");
 
