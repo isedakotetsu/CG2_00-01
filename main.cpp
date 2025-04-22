@@ -88,8 +88,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 
 	SetUnhandledExceptionFilter(ExposrtDump);
-	uint32_t* p = nullptr;
-	*p = 100;
+	
 
 	//log出力用のフォルダ[logs]作成
 	std::filesystem::create_directory("logs");
