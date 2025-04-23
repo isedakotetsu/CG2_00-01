@@ -144,20 +144,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	RECT wrc = { 0, 0, kClientWidth, kClientHeight };
 
 	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
-
+	//ウィンドウの生成
 	HWND hwnd = CreateWindow(
-		wc.lpszClassName,
-		L"CG2",
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		wrc.right - wrc.left,
-		wrc.bottom - wrc.top,
-		nullptr,
-		nullptr,
-		wc.hInstance,
-		nullptr);
-
+		wc.lpszClassName,//利用するクラス名
+		L"CG2",//タイトルバーの文字
+		WS_OVERLAPPEDWINDOW,//よく見るウィンドスタイル
+		CW_USEDEFAULT,//表示x座標
+		CW_USEDEFAULT,//表示y座標
+		wrc.right - wrc.left,//ウィンドウ横幅
+		wrc.bottom - wrc.top,//ウィンドウ立幅
+		nullptr,//親ウィンドウハンドル
+		nullptr,//メニューハンドル
+		wc.hInstance,//インスタンスバンドル
+		nullptr);//オプション
+#ifdef _DEBUG
+	ID3D12Debug1* debugController = nullptr;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+	{
+		//デバッグレイヤーを有効化する
+		debugController->EnableDebugLayer();
+		//さらにGPU側でもチェックを行うようにする
+		debugController->SetEnableGPUBasedValidation(TRUE);
+	}
+#endif
 	ShowWindow(hwnd, SW_SHOW);
 
 	//DXGIファクトリーの生成
