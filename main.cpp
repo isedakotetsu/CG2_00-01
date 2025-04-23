@@ -86,8 +86,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg,
 
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
-IDXGISwapChain4* swapChain = nullptr;
-DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
+
 
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
@@ -228,6 +227,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 	assert(SUCCEEDED(hr));
 	
+	IDXGISwapChain4* swapChain = nullptr;
+	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
+	swapChainDesc.Width = kClientWidth;//画面の幅
+	swapChainDesc.Height = kClientHeight;//画面の高さ
+	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;//色の形式
+	swapChainDesc.SampleDesc.Count = 1;//マルチサンプルしない
+	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;//描画のターゲットとして利用する
+	swapChainDesc.BufferCount = 2;//ダブルバッファ
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;//モニタにうつしたら、中身を
+
+	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue, hwnd, &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&swapChain));
 
 
 	MSG msg{};
