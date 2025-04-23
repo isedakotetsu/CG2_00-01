@@ -14,6 +14,9 @@
 #include<dbghelp.h>
 #include<strsafe.h>
 
+
+
+
 static LONG WINAPI ExposrtDump(EXCEPTION_POINTERS* exception)
 {
 	SYSTEMTIME time;
@@ -83,6 +86,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg,
 
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
+IDXGISwapChain4* swapChain = nullptr;
+DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
+
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
@@ -186,6 +192,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(useAdapter != nullptr);
 
 	ID3D12Device* device = nullptr;
+	
 
 	D3D_FEATURE_LEVEL featureLevels[] = {
 		D3D_FEATURE_LEVEL_12_2, D3D_FEATURE_LEVEL_12_1, D3D_FEATURE_LEVEL_12_0
@@ -205,7 +212,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	}
 
 	assert(device != nullptr);
-	Log(logstream,"complete create D3D12Device!!!\n");
+	Log(logstream, "complete create D3D12Device!!!\n");
+
+	ID3D12CommandQueue* commandQueue = nullptr;
+	D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
+	hr = device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&commandQueue));
+
+	assert(SUCCEEDED(hr));
+
+	ID3D12CommandAllocator* commandAllocator = nullptr;
+	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
+	assert(SUCCEEDED(hr));
+
+	ID3D12GraphicsCommandList* commandList = nullptr;
+	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	assert(SUCCEEDED(hr));
+	
 
 
 	MSG msg{};
