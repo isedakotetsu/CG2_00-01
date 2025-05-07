@@ -310,6 +310,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	device->CreateRenderTargetView(swapChainResources[1], &rtvDesc, rtvHandles[1]);
 
 
+	//初期値0でfenceを作る
+	ID3D12Fence* fence = nullptr;
+	uint64_t fenceValue = 0;
+
+	hr = device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+	assert(SUCCEEDED(hr));
+
+	//fenceのsignalを待つためのイベントを作成する
+	HANDLE fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	assert(fenceEvent != nullptr);
+
 
 	MSG msg{};
 
@@ -346,6 +357,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			//指定した色で画面全体をクリアする
 			float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
 			commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
+			//今回はrenderTargetからpresentにする
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+			//transitionbarrierを張る
+			commandList->ResourceBarrier(1, &barrier);
 			//コマンドリストの内容を確定させるすべてのコマンドを積んでからclauseすること
 			hr = commandList->Close();
 			assert(SUCCEEDED(hr));
@@ -355,6 +371,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			commandQueue->ExecuteCommandLists(1, commandLists);
 			//GPUとOSに画面の交換を行うように通知する
 			swapChain->Present(1, 0);
+			//fenceの値を更新
+			fenceValue++;
+			//GPUがここまでたどり着いたときに、fenceの値を指定した値に代入するようにsignalを送る
+			commandQueue->Signal(fence, fenceValue);
+			//fenceの値が指定したsignal値にたどり着いているか確認する
+			//getcompletedvalueの初期値はfence作成時に渡した初期値
+			if (fence->GetCompletedValue() < fenceValue)
+			{
+				//指定したsignalにたどり着いていないので、たどり着くまで待つようにイベントを設定する
+				fence->SetEventOnCompletion(fenceValue, fenceEvent);
+				//イベントを待つ
+				WaitForSingleObject(fenceEvent, INFINITE);
+			}
 			//次のフレーム用のコマンドリストを準備
 			hr = commandAllocator->Reset();
 			assert(SUCCEEDED(hr));
@@ -362,6 +391,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			assert(SUCCEEDED(hr));
 			//ゲーム処理
 		}
+		
 	}
 	
 
