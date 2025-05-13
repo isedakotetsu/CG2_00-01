@@ -2,6 +2,7 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment (lib, "Dbghelp.lib")
 #pragma comment(lib, "dxguid.lib")
+#pragma comment(lib, "dxcompiler.lib")
 #include <windows.h>
 #include<cstdint>
 #include <string>
@@ -15,6 +16,7 @@
 #include<dbghelp.h>
 #include<strsafe.h>
 #include<dxgidebug.h>
+#include<dxcapi.h>
 
 
 
@@ -36,7 +38,7 @@ static LONG WINAPI ExposrtDump(EXCEPTION_POINTERS* exception)
 	minidumpInformation.ExceptionPointers = exception;
 	minidumpInformation.ClientPointers = TRUE;
 
-	MiniDumpWriteDump(GetCurrentProcess(), processId, dumpFilehandle,MiniDumpNormal, &minidumpInformation, nullptr, nullptr);
+	MiniDumpWriteDump(GetCurrentProcess(), processId, dumpFilehandle, MiniDumpNormal, &minidumpInformation, nullptr, nullptr);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
@@ -89,13 +91,81 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg,
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
+IDxcBlob* CompileShader(
+	//compilerするshaderファイルへのバス
+	const std::wstring& filePath,
+	//compiler使用するprofile
+	const wchar_t* profile,
+	//初期化で生成したものを3つ
+	IDxcUtils* dxcUtils,
+	IDxcCompiler3* dxcCompiler,
+	IDxcIncludeHandler* includeHandler,
+	std::ostream& os)
+{
+	//これからシェーダーをコンパイルする旨をログに出す
+	Log(os, ConvertString(std::format(L"Begin CompileShader, path:{}, profile:{}\n", filePath, profile)));
+	//hlslファイルを読み込む
+	IDxcBlobEncoding* shaderSource = nullptr;
+	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
+	//読めなかったら止める
+	assert(SUCCEEDED(hr));
+	//読み込んだファイルの内容を設定する
+	DxcBuffer shaderSourceBuffer;
+
+	shaderSourceBuffer.Ptr = shaderSource->GetBufferPointer();
+
+	shaderSourceBuffer.Size = shaderSource->GetBufferSize();
+
+	shaderSourceBuffer.Encoding = DXC_CP_UTF8;//UTF8の文字コードであることを通知
+
+	LPCWSTR arguments[] = {
+		filePath.c_str(),//コンパイル対象のhlslファイル名
+		L"-E", L"main",//エントリーポイントの指定。基本的にmain以外にはしない
+		L"-T", profile,//shaderProfileの設定
+		L"-Zi", L"-Qembed_debug",//デバッグ用の情報を埋め込む
+		L"-Od",//最適化を外しておく
+		L"-Zpr",//メモリレイアウトは行優先
+
+	};
+	//実際にshaderをコンパイルする
+	IDxcResult* shaderResult = nullptr;
+	hr = dxcCompiler->Compile(
+		&shaderSourceBuffer,//読み込んだファイル
+		arguments,//コンパイルオプション
+		_countof(arguments),//コンパイルオプションの数
+		includeHandler,//includeが含まれた
+		IID_PPV_ARGS(&shaderResult)//コンパイル結果
+
+	);
+	//コンパイルエラーではなくdxcが起動できないなど致命的な状況
+	assert(SUCCEEDED(hr));
+
+	IDxcBlobUtf8* shaderError = nullptr;
+	shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
+	if (shaderError != nullptr && shaderError->GetStringLength() != 0)
+	{
+		Log(os,shaderError->GetStringPointer());
+		//警告。エラーダメ絶対
+		assert(false);
+	}
+	IDxcBlob* shaderBlob = nullptr;
+	hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
+	assert(SUCCEEDED(hr));
+	//成功したろぐをだす
+	Log(os, ConvertString(std::format(L"Comile Succeeded, path:{}, profile:{}\n", filePath, profile)));
+	//もう使わないリソースを解放
+	shaderSource->Release();
+	shaderResult->Release();
+	//実行用のバイナリを返却
+	return shaderBlob;
+}
 
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 
 	SetUnhandledExceptionFilter(ExposrtDump);
-	
+
 
 	//log出力用のフォルダ[logs]作成
 	std::filesystem::create_directory("logs");
@@ -105,7 +175,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//ログファイルの名前にコンマ何秒はいらないので、削って秒にする
 	std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
-	nowSeconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+		nowSeconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
 
 	//日本時間に変換（PCの設定）
 	std::chrono::zoned_time localTime{ std::chrono::current_zone(), nowSeconds };
@@ -136,12 +206,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	RegisterClass(&wc);
 
-	Log(logstream,"Hello,DirectX!\n");
-	
+	Log(logstream, "Hello,DirectX!\n");
+
 
 	const int32_t kClientWidth = 1280;
 	const int32_t kClientHeight = 720;
-	Log(logstream,ConvertString(std::format(L"WSTRING{}\n", kClientWidth)));
+	Log(logstream, ConvertString(std::format(L"WSTRING{}\n", kClientWidth)));
 
 	RECT wrc = { 0, 0, kClientWidth, kClientHeight };
 
@@ -202,7 +272,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(useAdapter != nullptr);
 
 	ID3D12Device* device = nullptr;
-	
+
 
 	D3D_FEATURE_LEVEL featureLevels[] = {
 		D3D_FEATURE_LEVEL_12_2, D3D_FEATURE_LEVEL_12_1, D3D_FEATURE_LEVEL_12_0
@@ -216,7 +286,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 		if (SUCCEEDED(hr))
 		{
-			Log(logstream,std::format("FeatureLevel : {}\n", featureLevelString[i]));
+			Log(logstream, std::format("FeatureLevel : {}\n", featureLevelString[i]));
 			break;
 		}
 	}
@@ -264,7 +334,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 	assert(SUCCEEDED(hr));
-	
+
 	IDXGISwapChain4* swapChain = nullptr;
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
 	swapChainDesc.Width = kClientWidth;//画面の幅
@@ -323,6 +393,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	HANDLE fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	assert(fenceEvent != nullptr);
 
+	IDxcUtils* dxcUtils = nullptr;
+	IDxcCompiler3* dxcCompiler = nullptr;
+	hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+	assert(SUCCEEDED(hr));
+	hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
+	assert(SUCCEEDED(hr));
+
+	IDxcIncludeHandler* includeHandler = nullptr;
+	hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
+	assert(SUCCEEDED(hr));
+
+	
+
+
 
 	MSG msg{};
 
@@ -333,8 +417,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 
-		} 
-		else
+		} else
 		{
 			//これから書き込むバックバッファのインデックスを取得
 			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
@@ -393,7 +476,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			assert(SUCCEEDED(hr));
 			//ゲーム処理
 		}
-		
+
 	}
 	CloseHandle(fenceEvent);
 	fence->Release();
@@ -413,7 +496,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	CloseWindow(hwnd);
 
 
-	
+
 	//リソースリークチェック
 	IDXGIDebug1* debug;
 
