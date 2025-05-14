@@ -23,3 +23,4 @@ PixelShaderOutput main()
     output.color = float32_t4(1.0, 1.0, 1.0, 1.0);
     return output;
 }
+

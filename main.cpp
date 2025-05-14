@@ -240,7 +240,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	}
 #endif
 	ShowWindow(hwnd, SW_SHOW);
-
+	
 	//DXGIファクトリーの生成
 	IDXGIFactory7* dxgiFactory = nullptr;
 	//HRESULTはWindows系のエラーコードであり
@@ -250,6 +250,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//どうにもできない場合が多いのでassertにしておく
 	assert(SUCCEEDED(hr));
 
+
+	
 	IDXGIAdapter4* useAdapter = nullptr;
 
 	for (UINT i = 0; dxgiFactory->EnumAdapterByGpuPreference(i,
@@ -404,7 +406,37 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
 	assert(SUCCEEDED(hr));
 
-	
+	//RootSignature作成
+	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+	descriptionRootSignature.Flags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	//シリアライズしてバイナリする
+	ID3DBlob* signatureBlob = nullptr;
+	ID3DBlob* errorBlob = nullptr;
+	hr = D3D12SerializeRootSignature(&descriptionRootSignature,
+		D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+	if (FAILED(hr))
+	{
+		Log(logstream, reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+		assert(false);
+
+	}
+	//バイナリをもとに生成
+	ID3D12RootSignature* rootSignature = nullptr;
+	hr = device->CreateRootSignature(0,
+		signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
+		IID_PPV_ARGS(&rootSignature));
+	assert(SUCCEEDED(hr));
+
+	//InputLayout
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[1] = {};
+	inputElementDescs[0].SemanticName = "POSITION";
+	inputElementDescs[0].SemanticIndex = 0;
+	inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	inputElementDescs[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+	inputLayoutDesc.pInputElementDescs = inputElementDescs;
+	inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
 
 
