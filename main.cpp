@@ -578,6 +578,43 @@ ID3D12Resource*  UploadTextureData(ID3D12Resource* texture, const DirectX::Scrat
 	return intermediateResource;
 }
 
+ID3D12Resource* CreateDepthStencilTextureResource(ID3D12Device* device, int32_t width, int32_t height)
+{
+	//生成するresourceの設定
+	D3D12_RESOURCE_DESC resourceDesc{};
+	resourceDesc.Width = width;//textureの幅
+	resourceDesc.Height = height;//textureの高さ
+	resourceDesc.MipLevels = 1;//mipmapの数
+	resourceDesc.DepthOrArraySize = 1;//奥行き　or　配列textureの配列数
+	resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;//depthstencilとして利用可能なフォーマット
+	resourceDesc.SampleDesc.Count = 1;//サンプリングカウント。1固定
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;//2次元
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;//depthstencilとして使う通知
+
+	//利用するheapの設定
+	D3D12_HEAP_PROPERTIES heapProperties{};
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;//Vram上に作る
+
+	//深度地のCLEAR設定
+	D3D12_CLEAR_VALUE depthClearValue{};
+	depthClearValue.DepthStencil.Depth = 1.0f;//1.0f(最大値)でクリア
+	depthClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;//フォーマット。resourceと合わせる
+
+	//Resourceの生成
+	ID3D12Resource* resource = nullptr;
+	HRESULT hr = device->CreateCommittedResource(
+		&heapProperties,//heapの設定
+		D3D12_HEAP_FLAG_NONE,//heapの特殊設定。特になし
+		&resourceDesc,//resourceの設定
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,//深度地を書き込む状態にしておく
+		&depthClearValue,//clear最適値
+		IID_PPV_ARGS(&resource));//作成するresourceポインタへのポインタ
+	assert(SUCCEEDED(hr));
+
+	return resource;
+
+}
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 	CoInitializeEx(0, COINIT_MULTITHREADED);
@@ -943,14 +980,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
-	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * 3);
+	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * 6);
+
+	ID3D12Resource* depthStencilresource = CreateDepthStencilTextureResource(device, kClientWidth, kClientHeight);
 
 	//頂点バッファビューを作成する
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 	//リソースの先頭のアドレスから使う
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
 	//使用するリソースのサイズは頂点3つ分のサイズ
-	vertexBufferView.SizeInBytes = sizeof(VertexData) * 3;
+	vertexBufferView.SizeInBytes = sizeof(VertexData) * 6;
 	//1頂点あたりのサイズ
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 
@@ -967,6 +1006,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//右下
 	vertexData[2].position = { 0.5f, -0.5f, 0.0f, 1.0f};
 	vertexData[2].texcoord = { 1.0f, 1.0f };
+
+	//左下2
+	vertexData[3].position = { -0.5f, -0.5f, 0.5f, 1.0f };
+	vertexData[3].texcoord = { 0.0f, 1.0f };
+	//上2
+	vertexData[4].position = { 0.0f, 0.0f, 0.0f, 1.0f };
+	vertexData[4].texcoord = { 0.5f, 0.0f };
+	//右下2
+	vertexData[5].position = { 0.5f, -0.5f, -0.5f, 1.0f };
+	vertexData[5].texcoord = { 1.0f, 1.0f };
 
 	//ビューポート
 	D3D12_VIEWPORT viewport{};
@@ -1130,7 +1179,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
 			//描画(drawcall/ドローコール)。３頂点で１つインスタンス。インスタンスについては今後
-			commandList->DrawInstanced(3, 1, 0, 0);
+			commandList->DrawInstanced(6, 1, 0, 0);
 
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 
@@ -1198,6 +1247,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	textureResource->Release();
 	intermediateResource->Release();
+	depthStencilresource->Release();
 
 
 
