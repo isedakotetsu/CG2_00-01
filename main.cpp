@@ -71,8 +71,13 @@ struct VertexData
 {
 	Vector4 position;
 	Vector2 texcoord;
+	Vector3 normal;
 };
-
+struct Material
+{
+	Vector4 color;
+	int32_t enableLighting;
+};
 
 //正射影行列
 Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip)
@@ -1004,7 +1009,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(hr));
 
 	//InputLayout
-	D3D12_INPUT_ELEMENT_DESC inputElementDescs[2] = {};
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
 	inputElementDescs[0].SemanticName = "POSITION";
 	inputElementDescs[0].SemanticIndex = 0;
 	inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -1013,6 +1018,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	inputElementDescs[1].SemanticIndex = 0;
 	inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
 	inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	inputElementDescs[2].SemanticName = "NORMAL";
+	inputElementDescs[2].SemanticIndex = 0;
+	inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
 	inputLayoutDesc.pInputElementDescs = inputElementDescs;
 	inputLayoutDesc.NumElements = _countof(inputElementDescs);
@@ -1086,29 +1095,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//1頂点あたりのサイズ
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 
-	//頂点リソースにデータを書き込む
-	VertexData* vertexData = nullptr;
-	//書き込むためのアドレスを取得
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-	//左下
-	vertexData[0].position = { -0.5f, -0.5f, 0.0f, 1.0f};
-	vertexData[0].texcoord = { 0.0f, 1.0f };
-	//上
-	vertexData[1].position = { 0.0f, 0.5f, 0.0f, 1.0f };
-	vertexData[1].texcoord = {0.5f, 0.0f};
-	//右下
-	vertexData[2].position = { 0.5f, -0.5f, 0.0f, 1.0f};
-	vertexData[2].texcoord = { 1.0f, 1.0f };
+	////頂点リソースにデータを書き込む
+	//VertexData* vertexData = nullptr;
+	////書き込むためのアドレスを取得
+	//vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	////左下
+	//vertexData[0].position = { -0.5f, -0.5f, 0.0f, 1.0f};
+	//vertexData[0].texcoord = { 0.0f, 1.0f };
+	////上
+	//vertexData[1].position = { 0.0f, 0.5f, 0.0f, 1.0f };
+	//vertexData[1].texcoord = {0.5f, 0.0f};
+	////右下
+	//vertexData[2].position = { 0.5f, -0.5f, 0.0f, 1.0f};
+	//vertexData[2].texcoord = { 1.0f, 1.0f };
 
-	//左下2
-	vertexData[3].position = { -0.5f, -0.5f, 0.5f, 1.0f };
-	vertexData[3].texcoord = { 0.0f, 1.0f };
-	//上2
-	vertexData[4].position = { 0.0f, 0.0f, 0.0f, 1.0f };
-	vertexData[4].texcoord = { 0.5f, 0.0f };
-	//右下2
-	vertexData[5].position = { 0.5f, -0.5f, -0.5f, 1.0f };
-	vertexData[5].texcoord = { 1.0f, 1.0f };
+	////左下2
+	//vertexData[3].position = { -0.5f, -0.5f, 0.5f, 1.0f };
+	//vertexData[3].texcoord = { 0.0f, 1.0f };
+	////上2
+	//vertexData[4].position = { 0.0f, 0.0f, 0.0f, 1.0f };
+	//vertexData[4].texcoord = { 0.5f, 0.0f };
+	////右下2
+	//vertexData[5].position = { 0.5f, -0.5f, -0.5f, 1.0f };
+	//vertexData[5].texcoord = { 1.0f, 1.0f };
+
+	
 
 	//sprite用の頂点リソースを作る
 	ID3D12Resource* vertexResourceSprite = CreateBufferResource(device, sizeof(VertexData) * 6);
@@ -1205,6 +1216,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			vertexDataShere[start + 3] = vertC;
 			vertexDataShere[start + 4] = vertB;
 			vertexDataShere[start + 5] = vertD;
+
+
+			vertexDataShere[start].normal.x = vertexDataShere[start].position.x;
+			vertexDataShere[start].normal.y = vertexDataShere[start].position.y;
+			vertexDataShere[start].normal.z = vertexDataShere[start].position.z;
+
 		}
 	}
 
@@ -1224,6 +1241,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(hr));
 	vertexDataSprite[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };//左下
 	vertexDataSprite[0].texcoord = { 0.0f, 1.0f };
+	vertexDataSprite[0].normal = { 0.0f, 0.0f, -1.0f };
 	vertexDataSprite[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };//左上
 	vertexDataSprite[1].texcoord = { 0.0f, 0.0f };
 	vertexDataSprite[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };//右下
@@ -1275,6 +1293,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
 	//単位行列を書き込んでおく
 	*wvpData = MakeIdentity4x4();
+
+	//Sprite用のマテリアルリソースを作る
+	ID3D12Resource* materialResourceSprite = CreateBufferResource(device, sizeof(Material));
+	//マテリアルにデータを書き込む
+	Material* materialDataSprite = nullptr;
+	//書き込むためのアドレスを取得
+	materialResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&materialDataSprite));
+	//白を書き込んでみる
+	*materialDataSprite = {};
+	materialDataSprite->color = Vector4{1.0f, 1.0f, 1.0f};
+	materialDataSprite->enableLighting = 1;
+	//spriteはlightingしないのでfalseを設定する
+	materialDataSprite->enableLighting = false;
 
 	Transform transform{ {1.0f, 1.0f, 1.0f},{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
 
@@ -1469,7 +1500,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			// マテリアルCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
-				0, materialResource->GetGPUVirtualAddress());
+				0, materialResourceSprite->GetGPUVirtualAddress());
 
 			// wvp用のCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
@@ -1573,7 +1604,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	textureResource2->Release();
 	intermediateResource2->Release();
-
+	materialResourceSprite->Release();
 
 
 	fence->Release();
