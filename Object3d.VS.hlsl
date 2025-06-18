@@ -14,11 +14,7 @@ struct VertexShaderInput
     
 };
 
-struct Material
-{
-    float32_t4 color;
-    int32_t enableLighting;
-};
+
 VertexShaderOutput main(VertexShaderInput input)
 {
     VertexShaderOutput output;
