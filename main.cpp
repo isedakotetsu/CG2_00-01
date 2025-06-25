@@ -376,6 +376,23 @@ struct Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, c
 
 }
 
+float Length(const Vector3& v)
+{
+	float length = sqrtf((v.x * v.x) + (v.y * v.y) + (v.z * v.z));
+	return length;
+};
+
+Vector3 Normalize(const Vector3& v)
+{
+	Vector3 normalize{};
+	float length = sqrtf((v.x * v.x) + (v.y * v.y) + (v.z * v.z));
+	normalize.x = v.x / length;
+	normalize.y = v.y / length;
+	normalize.z = v.z / length;
+
+	return normalize;
+};
+
 //Vector3 Transform(const Vector3 vector, const Matrix4x4& matrix)
 //{
 //	Vector3 result;
@@ -1337,6 +1354,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	directionnalLightData->direction = { 0.0f, -1.0f, 0.0f };
 	directionnalLightData->intensity = 1.0f;
 
+	/*ID3D12Resource* indexResourceSprite = CreateBufferResource(device, sizeof(uint32_t) * 6);
+
+	uint32_t* indexResourceData = nullptr;
+
+	indexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&indexResourceData));
+
+	*indexResourceData = {};*/
+
 
 
 
@@ -1438,7 +1463,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			ImGui::SliderFloat3("translateSprite", &transformSprite.translate.x, 0.0f, 600.0f);
 			ImGui::Checkbox("useMosterBall", &useMonsterBall);
 			ImGui::SliderFloat3("Light", &directionnalLightData->direction.x, -1.0f, 0.8f);
-			
+			directionnalLightData->direction = Normalize(directionnalLightData->direction);
 
 			ImGui::End();
 
@@ -1459,8 +1484,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			Matrix4x4 worldViewProjectionMatrix =
 				Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 
-			wvpData->World = worldMatrix;
+			
 			wvpData->WVP = worldViewProjectionMatrix;
+			wvpData->World = worldMatrix;
 			
 			
 			// Sprite用のWorldViewProjectionMatrixを作る
