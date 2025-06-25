@@ -1236,8 +1236,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			vertexDataShere[start + 4] = vertB;
 			vertexDataShere[start + 5] = vertD;
 
-
-			
+		
 
 		
 
