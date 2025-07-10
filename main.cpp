@@ -1645,12 +1645,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
 			commandList->SetGraphicsRootDescriptorTable(2,useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
+
 			//平行光源用CBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
 				3, directionnalLightResource->GetGPUVirtualAddress());
-			
-			
-			
 			
 			
 			// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
@@ -1658,6 +1656,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			//commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 			
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
+
+
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 			
 
