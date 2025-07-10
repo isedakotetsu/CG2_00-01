@@ -1486,11 +1486,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			ImGui::DragFloat2("uvTranslate", &uvTransformSprite.translate.x, 0.01f, -10.0f, 10.0f);
 			ImGui::DragFloat2("uvcale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
 			ImGui::SliderAngle("uvRotate", &uvTransformSprite.rotate.z);
+			ImGui::SliderAngle("SphereRotate", &transform.rotate.y);
 			directionnalLightData->direction = Normalize(directionnalLightData->direction);
 
 			ImGui::End();
 
-			transform.rotate.y += 0.009f;
+			//transform.rotate.y += 0.009f;
 
 			Matrix4x4 worldMatrix = MakeAffineMatrix(
 				transform.scale, transform.rotate, transform.translate);
