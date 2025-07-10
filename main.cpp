@@ -979,7 +979,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 	ID3D12DescriptorHeap* srvDescriptorHeap = CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
 	
-	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * 6);
 	
 	ID3D12Resource* depthStencilresource = CreateDepthStencilTextureResource(device, kClientWidth, kClientHeight);
 	
@@ -1189,16 +1188,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
-	
+
+	ModelData modelData = LoadObjFile("resources", "plane.obj");
+
+	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
 
 	//頂点バッファビューを作成する
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 	//リソースの先頭のアドレスから使う
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
 	//使用するリソースのサイズは頂点3つ分のサイズ
-	vertexBufferView.SizeInBytes = sizeof(VertexData) * 6;
+	vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());
 	//1頂点あたりのサイズ
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
+
+	VertexData* vertexData = nullptr;
+	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData)* modelData.vertices.size());
 
 	//sprite用の頂点リソースを作る
 	ID3D12Resource* vertexResourceSprite = CreateBufferResource(device, sizeof(VertexData) * 6);
@@ -1227,20 +1233,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	uint32_t vertexCount = (kSubdivision + 1) * (kSubdivision + 1);
 	uint32_t indexCount = kSubdivision * kSubdivision * 6;
 
-	ModelData modelData = LoadObjFile("resources", "plane.obj");
-	ID3D12Resource* vertexResourceShere = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
+
+	ID3D12Resource* vertexResourceShere = CreateBufferResource(device, sizeof(VertexData) * vertexCount);
 	ID3D12Resource* indexResource = CreateBufferResource(device, sizeof(uint32_t) * indexCount);
 
 	// 頂点バッファビュー
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferViewShere{};
 	vertexBufferViewShere.BufferLocation = vertexResourceShere->GetGPUVirtualAddress();
-	vertexBufferViewShere.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());
+	vertexBufferViewShere.SizeInBytes = sizeof(VertexData) * vertexCount;
 	vertexBufferViewShere.StrideInBytes = sizeof(VertexData);
+	
 
 
 	VertexData* vertexDataShere = nullptr;
 	vertexResourceShere->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataShere));
-	std::memcpy(vertexDataShere, modelData.vertices.data(), sizeof(VertexData)* modelData.vertices.size());
 
 	const float kLonEvery = 2.0f * std::numbers::pi_v<float> / float(kSubdivision);
 	const float kLatEvery = std::numbers::pi_v<float> / float(kSubdivision);
@@ -1649,16 +1655,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			//平行光源用CBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
 				3, directionnalLightResource->GetGPUVirtualAddress());
+
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
 			
 			
 			// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 			commandList->IASetIndexBuffer(&indexBufferView);
 			//commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
-			
-			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
 
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
 
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+			
+			
+
+
+		
 			
 
 			// マテリアルCBufferの場所を設定
