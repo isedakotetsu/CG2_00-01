@@ -1629,7 +1629,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			// RootSignatureを設定。PSOに設定しているけど別途設定が必要
 			commandList->SetGraphicsRootSignature(rootSignature);
 			commandList->SetPipelineState(graphicsPipelineState);     // PSOを設定
-			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewShere); // VBVを設定
+			
 			
 			
 		
@@ -1648,17 +1648,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			//平行光源用CBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
 				3, directionnalLightResource->GetGPUVirtualAddress());
-
 			
 			
-
+			
+			
 			
 			// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 			commandList->IASetIndexBuffer(&indexBufferView);
-			commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
-
+			//commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+			
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+			
 
 			// マテリアルCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
