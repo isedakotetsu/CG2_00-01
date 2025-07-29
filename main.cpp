@@ -3,6 +3,7 @@
 #pragma comment (lib, "Dbghelp.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "dxcompiler.lib")
+#pragma comment(lib, "xaudio2.lib")
 #include <windows.h>
 #include<cstdint>
 #include <string>
@@ -26,6 +27,8 @@
 #include <numbers>
 #include <sstream>
 #include <wrl.h>
+#include <xaudio2.h>
+
 
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -462,7 +465,27 @@ static LONG WINAPI ExposrtDump(EXCEPTION_POINTERS* exception)
 	MiniDumpWriteDump(GetCurrentProcess(), processId, dumpFilehandle, MiniDumpNormal, &minidumpInformation, nullptr, nullptr);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
-
+struct ChunkHeader
+{
+	char id[4];
+	int32_t size;
+};
+struct RiffHeader
+{
+	ChunkHeader chunk;
+	char type[4];
+};
+struct FormatChunk
+{
+	ChunkHeader chunk;
+	WAVEFORMATEX fmt;
+};
+struct SoundData
+{
+	WAVEFORMATEX wfex;
+	BYTE* pBuffer;
+	unsigned int bufferSize;
+};
 void Log(std::ostream& os, const std::string& message)
 {
 	os << message << std::endl;
@@ -847,13 +870,119 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const Microsoft::WRL::ComPtr<
 	handleGPU.ptr += (descriptorSize * index);
 	return handleGPU;
 }
+void SoundUnload(SoundData* soundData)
+{
+	//バッファのメモリ
+	delete[] soundData->pBuffer;
 
+	soundData->pBuffer = 0;
+	soundData->bufferSize = 0;
+	soundData->wfex = {};
+}
+void SoundPlayWave(IXAudio2* xAudio2, const SoundData& soundData)
+{
+	HRESULT result;
+
+	//波形フォーマットを元にsoundvoiceの生成
+	IXAudio2SourceVoice* pSourceVoice = nullptr;
+	result = xAudio2->CreateSourceVoice(&pSourceVoice, &soundData.wfex);
+	assert(SUCCEEDED(result));
+
+	//再生する波形データの設定
+	XAUDIO2_BUFFER buf{};
+	buf.pAudioData = soundData.pBuffer;
+	buf.AudioBytes = soundData.bufferSize;
+	buf.Flags = XAUDIO2_END_OF_STREAM;
+
+	//波形データの再生
+	result = pSourceVoice->SubmitSourceBuffer(&buf);
+	result = pSourceVoice->Start();
+}
+SoundData SoundLoadWave(const char* filename)
+{
+	
+	//ファイル入力ストリームのインスタンス
+	std::ifstream file;
+	//wavファイルをバイナリモードで開く
+	file.open(filename, std::ios_base::binary);
+	//ファイルオープン失敗を検出する
+	assert(file.is_open());
+
+	//RIFFヘッダーの読み込み
+	RiffHeader riff;
+	file.read((char*)&riff, sizeof(riff));
+	//ファイルがriffかチェック
+	if (strncmp(riff.chunk.id, "RIFF", 4) != 0)
+	{
+		assert(0);
+	}
+	//タイプがwaveかチェック
+	if (strncmp(riff.type, "WAVE", 4) != 0)
+	{
+		assert(0);
+	}
+	//formatチャンクの読み込み
+	FormatChunk format = {};
+	//チャンクヘッダーの確認
+	file.read((char*)&format, sizeof(ChunkHeader));
+	if (strncmp(format.chunk.id, "fmt ", 4) != 0)
+	{
+		assert(0);
+	}
+	//チャンク本体の読み込み
+	assert(format.chunk.size <= sizeof(format.fmt));
+	file.read((char*)&format.fmt, format.chunk.size);
+	//Dataチャンクの読み込み
+	ChunkHeader data;
+	file.read((char*)&data, sizeof(data));
+	//junkチャンクを検出した場合
+	if (strncmp(data.id, "JUNK", 4) == 0)
+	{
+		//読み取り位置をjunkチャンクの終わりまで進める
+		file.seekg(data.size, std::ios_base::cur);
+		file.read((char*)&data, sizeof(data));
+	}
+	if (strncmp(data.id, "data", 4) != 0)
+	{
+		assert(0);
+	}
+	//dataチャンクのデータ部（波形データ）の読み込み
+	char* pBuffer = new char[data.size];
+	file.read(pBuffer, data.size);
+
+	//waveファイルを閉じる
+	file.close();
+
+	SoundData soundData = {};
+
+	soundData.wfex = format.fmt;
+	soundData.pBuffer = reinterpret_cast<BYTE*>(pBuffer);
+	soundData.bufferSize = data.size;
+
+	return soundData;
+
+}
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
+
 	D3DResourceLeakChecker leakCheck;
 
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 	SetUnhandledExceptionFilter(ExposrtDump);
+
+	//サウンド
+	Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
+	IXAudio2MasteringVoice* masterVoice;
+
+	HRESULT result = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
+	assert(SUCCEEDED(result));
+	result = xAudio2->CreateMasteringVoice(&masterVoice);
+	assert(SUCCEEDED(result));
+
+	SoundData soundData1 = SoundLoadWave("resources/loop100203.wav");
+	SoundPlayWave(xAudio2.Get(), soundData1);
+
+	
 
 	
 
@@ -1258,7 +1387,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(hr));
 
 
-	ModelData modelData = LoadObjFile("resources", "axis.obj");
+	ModelData modelData = LoadObjFile("resources", "bunny.obj");
+
+
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
 
@@ -1271,9 +1402,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//1頂点あたりのサイズ
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 
+
 	VertexData* vertexData = nullptr;
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData)* modelData.vertices.size());
+
+	
+
+	
+
+
 
 	//sprite用の頂点リソースを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResourceSprite = CreateBufferResource(device, sizeof(VertexData) * 6);
@@ -1402,6 +1540,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	materialData->color = Vector4 (1.0f, 1.0f, 1.0f, 1.0f);
 	materialData->enableLighting = true;
 	materialData->uvTransform = MakeIdentity4x4();
+
+
 	//WVP用のリソースを作る。matrix4x4　1つ分のサイズを用意する
 	Microsoft::WRL::ComPtr<ID3D12Resource> wvpResource = CreateBufferResource(device, sizeof(TransformationMatrix));
 
@@ -1504,7 +1644,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
 
+	
+
+
 	Transform transformSprite{ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
+
+	
 
 	Transform uvTransformSprite{
 		{1.0f,1.0f,1.0f},
@@ -1576,7 +1721,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
 	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
 
+
+
+
 	bool useMonsterBall = true;
+
+	
 
 	
 
@@ -1608,7 +1758,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			ImGui::DragFloat2("uvcale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
 			ImGui::SliderAngle("uvRotate", &uvTransformSprite.rotate.z);
 			ImGui::SliderAngle("SphereRotate", &transform.rotate.y);
+			ImGui::SliderAngle("SphereScale", &transform.scale.y);
+			ImGui::SliderAngle("Spheretranslate", &transform.translate.y);
+
+			
+			
+		
 			directionnalLightData->direction = Normalize(directionnalLightData->direction);
+			
 
 			ImGui::End();
 
@@ -1652,6 +1809,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			transformationMatrixDataSprite->World = worldMatrixSprite;
 			transformationMatrixDataSprite->WVP = worldViewProjectionMatrixSprite;
+
+
+
+
+
+			
+
+
+
 			
 
 			// ImGuiの内部コマンドを生成する
@@ -1701,39 +1867,36 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			commandList->RSSetViewports(1, &viewport);       // Viewportを設定
 			commandList->RSSetScissorRects(1, &scissorRect); // Scirssorを設定
+			  // PSOを設定
+			
+			
+			
+			
 			// RootSignatureを設定。PSOに設定しているけど別途設定が必要
 			commandList->SetGraphicsRootSignature(rootSignature.Get());
-			commandList->SetPipelineState(graphicsPipelineState.Get());     // PSOを設定
-			
-			
-			
-		
+			commandList->SetPipelineState(graphicsPipelineState.Get());
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
+			commandList->IASetIndexBuffer(&indexBufferView);
 			// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
 			commandList->SetGraphicsRootConstantBufferView(
 				0, materialResource->GetGPUVirtualAddress());
-
 			// wvp用のCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
 				1, wvpResource->GetGPUVirtualAddress());
-
 			// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
-			commandList->SetGraphicsRootDescriptorTable(2,useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
-
+			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 			//平行光源用CBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(
 				3, directionnalLightResource->GetGPUVirtualAddress());
-
-			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
-			
 			
 			// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
-			commandList->IASetIndexBuffer(&indexBufferView);
+			
 			//commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+						
+
 
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 			
 			
@@ -1757,7 +1920,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			// 描画！（DrawCall/ドローコール)
 			commandList->IASetIndexBuffer(&indexBufferViewSprite);//IBVを設定
-	        //commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	        commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 			
 			
 
@@ -1810,79 +1973,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	CoUninitialize();
 
 	CloseHandle(fenceEvent);
-	/*dxcUtils->Release();
-	dxcCompiler->Release();
-	includeHandler->Release();
-	wvpResource->Release();
-	materialResource->Release();
-	vertexResource->Release();
-	graphicsPipelineState->Release();
-	signatureBlob->Release();
-
-	if (errorBlob)
-	{
-		errorBlob->Release();
-	}
-	rootSignature->Release();
-	pixelShaderBlob->Release();
-	vertexShaderBlob->Release();
-
-
-	textureResource->Release();
-	intermediateResource->Release();
-	depthStencilresource->Release();
-	dsvDescriptorHeap->Release();
-	vertexResourceSprite->Release();
-	transformationMatrixResourceSprite->Release();
-	vertexResourceShere->Release();
-	transformationMatrixResourceShere->Release();
-
-	textureResource2->Release();
-	intermediateResource2->Release();
-	materialResourceSprite->Release();
-	directionnalLightResource->Release();
-	indexResourceSprite->Release();
-	indexSphereResource->Release();
-	indexResource->Release();
 	
-	
-
-	fence->Release();
-	srvDescriptorHeap->Release();
-	rtvDescriptorHeap->Release();
-	swapChainResources[0]->Release();
-	swapChainResources[1]->Release();
-	swapChain->Release();
-	
-
-
-
-	commandList->Release();
-	commandAllocator->Release();
-	commandQueue->Release();
-	device->Release();
-	useAdapter->Release();
-	dxgiFactory->Release();*/
-
 	
 	CloseWindow(hwnd);
+
+	xAudio2.Reset();
+
+	SoundUnload(&soundData1);
 	
-#ifdef _DEBUG
-	//debugController->Release();
-#endif
 
-	//リソースリークチェック
-	//Microsoft::WRL::ComPtr<IDXGIDebug1> debug;
-	//
-
-
-	//if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
-	//{
-	//	debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-	//	debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-	//	debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-	//	//debug->Release();
-	//}
 	//警告時に止まる
 	infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 	return 0;
