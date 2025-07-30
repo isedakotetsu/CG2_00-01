@@ -415,20 +415,7 @@ Vector3 Normalize(const Vector3& v)
 	return normalize;
 };
 
-//Vector3 Transform(const Vector3 vector, const Matrix4x4& matrix)
-//{
-//	Vector3 result;
-//	result.x = vector.x * matrix.m[0][0] + vector.y * matrix.m[1][0] + vector.z * matrix.m[2][0] + 1.0f * matrix.m[3][0];
-//	result.y = vector.x * matrix.m[0][1] + vector.y * matrix.m[1][1] + vector.z * matrix.m[2][1] + 1.0f * matrix.m[3][1];
-//	result.z = vector.x * matrix.m[0][2] + vector.y * matrix.m[1][2] + vector.z * matrix.m[2][2] + 1.0f * matrix.m[3][2];
-//	float w = vector.x * matrix.m[0][3] + vector.y * matrix.m[1][3] + vector.z * matrix.m[2][3] + 1.0f * matrix.m[3][3];
-//	assert(w != 0.0f);
-//	result.x /= w;
-//	result.y /= w;
-//	result.z /= w;
-//
-//	return result;
-//}
+
 struct D3DResourceLeakChecker
 {
 	~D3DResourceLeakChecker()
@@ -1402,12 +1389,55 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//1頂点あたりのサイズ
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 
-
 	VertexData* vertexData = nullptr;
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData)* modelData.vertices.size());
 
-	
+	//Obj用のtransformationMatrix用のリソースを作る。matrix4x4　1つ分のサイズを用意する
+	Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResourceObj = CreateBufferResource(device, sizeof(Matrix4x4));
+	//データを書き込む
+	Matrix4x4* transformationMatrixDataObj = nullptr;
+	//書き込むためのアドレスを取得
+	transformationMatrixResourceObj->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixDataObj));
+	//単位行列を書き込んでおく
+	*transformationMatrixDataObj = MakeIdentity4x4();
+
+
+	//マテリアル用のリソースを作る。今回はcolor1つ分のサイズ用意する
+	Microsoft::WRL::ComPtr<ID3D12Resource> materialResourceObj = CreateBufferResource(device, sizeof(Material));
+	//マテリアルにデータを書き込む
+	Material* materialDataObj = nullptr;
+	//書き込むためのアドレスを取得
+	materialResourceObj->Map(0, nullptr, reinterpret_cast<void**>(&materialDataObj));
+	//今回は赤を書き込んでみる
+	materialDataObj->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	materialDataObj->enableLighting = true;
+	materialDataObj->uvTransform = MakeIdentity4x4();
+
+
+	//WVP用のリソースを作る。matrix4x4　1つ分のサイズを用意する
+	Microsoft::WRL::ComPtr<ID3D12Resource> wvpResourceObj = CreateBufferResource(device, sizeof(TransformationMatrix));
+
+	//データを読み込む
+	TransformationMatrix* wvpDataObj = nullptr;
+	//書き込むためのアドレスを取得
+	wvpResourceObj->Map(0, nullptr, reinterpret_cast<void**>(&wvpDataObj));
+	//単位行列を書き込んでおく
+	wvpDataObj->WVP = MakeIdentity4x4();
+
+
+	//平行光源用のリソースを作る
+	Microsoft::WRL::ComPtr<ID3D12Resource> directionnalLightResourceObj = CreateBufferResource(device, sizeof(DirectionalLight));
+	//マテリアルにデータを書き込む
+	DirectionalLight* directionnalLightDataObj = nullptr;
+	//書き込むためのアドレスを取得
+	directionnalLightResourceObj->Map(0, nullptr, reinterpret_cast<void**>(&directionnalLightDataObj));
+	//白を書き込んでみる
+	*directionnalLightDataObj = {};
+	directionnalLightDataObj->color = { 1.0f, 1.0f, 1.0f ,1.0f };
+	directionnalLightDataObj->direction = { 0.0f, -1.0f, 0.0f };
+	directionnalLightDataObj->intensity = 1.0f;
+
 
 	
 
@@ -1642,9 +1672,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	Transform transform{ {1.0f, 1.0f, 1.0f},{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
 
+	Transform transformObj{ {1.5f, 1.5f, 1.5f},{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
+
 	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
 
-	
+	Transform cameraTransformObj{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
 
 
 	Transform transformSprite{ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
@@ -1760,17 +1792,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			ImGui::SliderAngle("SphereRotate", &transform.rotate.y);
 			ImGui::SliderAngle("SphereScale", &transform.scale.y);
 			ImGui::SliderAngle("Spheretranslate", &transform.translate.y);
+			ImGui::SliderAngle("ObjRotate", &transformObj.rotate.y);
+			ImGui::SliderAngle("ObjScale", &transformObj.scale.y);
+			ImGui::SliderAngle("Objtranslate", &transformObj.translate.y);
 
 			
 			
 		
 			directionnalLightData->direction = Normalize(directionnalLightData->direction);
-			
+			directionnalLightDataObj->direction = Normalize(directionnalLightDataObj->direction);
 
 			ImGui::End();
 
 			//transform.rotate.y += 0.009f;
-
+			//sp用
 			Matrix4x4 worldMatrix = MakeAffineMatrix(
 				transform.scale, transform.rotate, transform.translate);
 
@@ -1813,7 +1848,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 
+			Matrix4x4 worldMatrixObj = MakeAffineMatrix(
+				transformObj.scale, transformObj.rotate, transformObj.translate);
 
+			Matrix4x4 cameraMatrixObj =
+				MakeAffineMatrix(cameraTransformObj.scale, cameraTransformObj.rotate,
+					cameraTransformObj.translate);
+
+			Matrix4x4 viewMatrixObj = Inverse(cameraMatrixObj);
+
+			Matrix4x4 projectionMatrixObj = MakePerspectiveFovMatrix(
+				0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+
+			Matrix4x4 worldViewProjectionMatrixObj =
+				Multiply(worldMatrixObj, Multiply(viewMatrixObj, projectionMatrixObj));
+
+
+
+			wvpDataObj->WVP = worldViewProjectionMatrixObj;
+			wvpDataObj->World = worldMatrixObj;
 			
 
 
@@ -1892,11 +1945,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			
 			// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 			
-			//commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+			commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 						
 
-
+			// RootSignatureを設定。PSOに設定しているけど別途設定が必要
+			commandList->SetGraphicsRootSignature(rootSignature.Get());
+			commandList->SetPipelineState(graphicsPipelineState.Get());
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+			// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
+			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			commandList->SetGraphicsRootConstantBufferView(
+				0, materialResourceObj->GetGPUVirtualAddress());
+			// wvp用のCBufferの場所を設定
+			commandList->SetGraphicsRootConstantBufferView(
+				1, wvpResourceObj->GetGPUVirtualAddress());
+			// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
+			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
+			//平行光源用CBufferの場所を設定
+			commandList->SetGraphicsRootConstantBufferView(
+				3, directionnalLightResourceObj->GetGPUVirtualAddress());
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 			
 			
