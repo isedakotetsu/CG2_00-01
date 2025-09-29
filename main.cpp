@@ -1426,18 +1426,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	wvpDataObj->WVP = MakeIdentity4x4();
 
 
-	//平行光源用のリソースを作る
-	Microsoft::WRL::ComPtr<ID3D12Resource> directionnalLightResourceObj = CreateBufferResource(device, sizeof(DirectionalLight));
-	//マテリアルにデータを書き込む
-	DirectionalLight* directionnalLightDataObj = nullptr;
-	//書き込むためのアドレスを取得
-	directionnalLightResourceObj->Map(0, nullptr, reinterpret_cast<void**>(&directionnalLightDataObj));
-	//白を書き込んでみる
-	*directionnalLightDataObj = {};
-	directionnalLightDataObj->color = { 1.0f, 1.0f, 1.0f ,1.0f };
-	directionnalLightDataObj->direction = { 0.0f, -1.0f, 0.0f };
-	directionnalLightDataObj->intensity = 1.0f;
-
+	
 
 	
 
@@ -1800,11 +1789,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			
 		
 			directionnalLightData->direction = Normalize(directionnalLightData->direction);
-			directionnalLightDataObj->direction = Normalize(directionnalLightDataObj->direction);
+			
 
 			ImGui::End();
 
-			//transform.rotate.y += 0.009f;
+			
 			//sp用
 			Matrix4x4 worldMatrix = MakeAffineMatrix(
 				transform.scale, transform.rotate, transform.translate);
@@ -1847,7 +1836,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 
-
+			//Obj用
 			Matrix4x4 worldMatrixObj = MakeAffineMatrix(
 				transformObj.scale, transformObj.rotate, transformObj.translate);
 
@@ -1961,9 +1950,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 				1, wvpResourceObj->GetGPUVirtualAddress());
 			// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
 			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
-			//平行光源用CBufferの場所を設定
-			commandList->SetGraphicsRootConstantBufferView(
-				3, directionnalLightResourceObj->GetGPUVirtualAddress());
+			
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 			
 			
@@ -2050,8 +2037,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 
 	//警告時に止まる
+#ifdef _DEBUG
 	infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+#endif
 	return 0;
+
 }
 
 
