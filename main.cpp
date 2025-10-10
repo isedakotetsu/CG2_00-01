@@ -1319,6 +1319,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	D3D12_BLEND_DESC blendDesc{};
 	//全ての色要素を書き込む
 	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	blendDesc.RenderTarget[0].BlendEnable = TRUE;
+	blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+	blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
 
 	//ResiterzeStateの設定
 	D3D12_RASTERIZER_DESC rasterizerDesc{};
@@ -1771,7 +1778,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			// ImGui::ShowDemoWindow();
 
 			ImGui::Begin("Window");
-			ImGui::ColorEdit3("color", &(materialData->color.x));
+			ImGui::ColorEdit4("color", &(materialData->color.x));
 			ImGui::SliderFloat3("translateSprite", &transformSprite.translate.x, 0.0f, 600.0f);
 			ImGui::Checkbox("useMosterBall", &useMonsterBall);
 			ImGui::SliderFloat3("Light", &directionnalLightData->direction.x, -1.0f, 0.8f);
