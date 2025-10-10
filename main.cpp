@@ -1381,7 +1381,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(hr));
 
 
-	ModelData modelData = LoadObjFile("resources", "bunny.obj");
+	ModelData modelData = LoadObjFile("resources", "fence.obj");
 
 
 
@@ -1941,7 +1941,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			
 			// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 			
-			commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+			//commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 						
 
 			// RootSignatureを設定。PSOに設定しているけど別途設定が必要
@@ -1981,7 +1981,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			// 描画！（DrawCall/ドローコール)
 			commandList->IASetIndexBuffer(&indexBufferViewSprite);//IBVを設定
-	        commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	       // commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 			
 			
 
