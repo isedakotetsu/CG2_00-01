@@ -1,4 +1,3 @@
-
 name: ReleaseBuild
 on:
   push:
