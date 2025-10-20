@@ -1,0 +1,24 @@
+Hello,DirectX!
+
+WSTRING1280
+
+Use Adapter:NVIDIA GeForce RTX 4060 Laptop GPU
+
+FeatureLevel : 12.2
+
+complete create D3D12Device!!!
+
+Begin CompileShader, path:Object3D.VS.hlsl, profile:vs_6_0
+
+Comile Succeeded, path:Object3D.VS.hlsl, profile:vs_6_0
+
+Begin CompileShader, path:Object3D.PS.hlsl, profile:ps_6_0
+
+Object3D.PS.hlsl:21:38: error: use of undeclared identifier 'gTextureColor'; did you mean 'textureColor'?
+    output.color = gMaterial.color * gTextureColor;
+                                     ^~~~~~~~~~~~~
+                                     textureColor
+Object3D.PS.hlsl:19:16: note: 'textureColor' declared here
+    float32_t4 textureColor = gTexture.Sample(gSampler, input.texcoord);
+               ^
+
