@@ -28,6 +28,8 @@
 #include <sstream>
 #include <wrl.h>
 #include <xaudio2.h>
+#include "Input.h"
+
 
 
 
@@ -957,18 +959,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 	SetUnhandledExceptionFilter(ExposrtDump);
 
-	//サウンド
-	Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
-	IXAudio2MasteringVoice* masterVoice;
-
-	HRESULT result = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
-	assert(SUCCEEDED(result));
-	result = xAudio2->CreateMasteringVoice(&masterVoice);
-	assert(SUCCEEDED(result));
-
-	SoundData soundData1 = SoundLoadWave("resources/loop100203.wav");
-	SoundPlayWave(xAudio2.Get(), soundData1);
-
+	
+	Input* input = nullptr;
 	
 
 	
@@ -1055,6 +1047,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//初期化の根本的な部分でエラーが出た場合はプログラムが間違っているか
 	//どうにもできない場合が多いのでassertにしておく
 	assert(SUCCEEDED(hr));
+
 
 
 
@@ -1234,6 +1227,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	IDxcIncludeHandler* includeHandler = nullptr;
 	hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
 	assert(SUCCEEDED(hr));
+
+
 
 	//RootSignature作成
 	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
@@ -1679,6 +1674,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	};
 
 	
+	
+
+	input = new Input();
+	input->Initialize(wc.hInstance, hwnd);
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -1762,7 +1761,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			DispatchMessage(&msg);
 		} else {
 			// ゲーム処理
-
+			input->Update();
+			if (input->TriggerKey(DIK_0))
+			{
+				OutputDebugStringA("Hit 0\n");
+			}
 			ImGui_ImplDX12_NewFrame();
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
@@ -2026,14 +2029,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ImGui::DestroyContext();
 	CoUninitialize();
 
+	delete input;
 	CloseHandle(fenceEvent);
 	
 	
 	CloseWindow(hwnd);
 
-	xAudio2.Reset();
-
-	SoundUnload(&soundData1);
+	
 	
 
 	//警告時に止まる
