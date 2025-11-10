@@ -4,14 +4,14 @@
 #include <wrl.h>
 #pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"dxguid.lib")
-
+#include "WinApp.h"
 
 
 class Input
 {
 public:
 
-	void Initialize(HINSTANCE hInstance, HWND hwnd);
+	void Initialize(WinApp* winApp);
 	void Update();
 	template <class T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 	bool PushKey(BYTE keyNumber);
@@ -21,4 +21,5 @@ private:
 	Microsoft::WRL::ComPtr<IDirectInput8> directInput = nullptr;
 	BYTE key[256] = {};
 	BYTE keyPre[256] = {};
+	WinApp* winApp = nullptr;
 };
