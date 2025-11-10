@@ -21,5 +21,5 @@ private:
 	Microsoft::WRL::ComPtr<IDirectInput8> directInput = nullptr;
 	BYTE key[256] = {};
 	BYTE keyPre[256] = {};
-	WinApp* winApp = nullptr;
+	WinApp* winApp_ = nullptr;
 };

@@ -948,6 +948,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 
 	
+	winApp = new WinApp();
+	winApp->Initialize();
+
+	input = new Input();
+	input->Initialize(winApp);
+
+	
 
 	//log出力用のフォルダ[logs]作成
 	std::filesystem::create_directory("logs");
@@ -1626,11 +1633,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 	
 
-	input = new Input();
-	input->Initialize(winApp);
-
-	winApp = new WinApp();
-	winApp->Initialize();
+	
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -1709,9 +1712,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	while (msg.message != WM_QUIT)
 	{
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+		if (winApp->ProcessMessage()) {
+			break;
 		} else {
 			// ゲーム処理
 			input->Update();
@@ -1981,15 +1983,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	delete winApp;
+	
 	delete input;
 
 	
 	
-	
-	CloseHandle(fenceEvent);
-	CloseWindow(winApp->GetHwnd());
-	CoUninitialize();
+	winApp->Finalize();
+	delete winApp;
+
 
 	
 	

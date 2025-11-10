@@ -13,6 +13,8 @@ public:
 	static const int32_t kClientHeight = 720;
 	HWND GetHwnd() const { return hwnd; }
 	HINSTANCE GetHInstance() const { return wc.hInstance; }
+	bool ProcessMessage();
+	void Finalize();
 private:
 	HWND hwnd = nullptr;
 	WNDCLASS wc{};
