@@ -28,6 +28,7 @@
 #include <sstream>
 #include <wrl.h>
 #include <xaudio2.h>
+#include <random>
 
 
 
@@ -110,6 +111,12 @@ struct ModelData
 	std::vector<VertexData> vertices;
 	MaterialData material;
 };
+struct Particle
+{
+	Transform transform;
+	Vector3 velocity;
+};
+
 
 //正射影行列
 Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip)
@@ -505,7 +512,8 @@ std::string ConvertString(const std::wstring& str) {
 	WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), result.data(), sizeNeeded, NULL, NULL);
 	return result;
 }
-
+std::random_device seedGenerator;
+std::mt19937 randomEngine(seedGenerator());
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg,
 	WPARAM wparam, LPARAM lparam)
 {
@@ -1897,13 +1905,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		{0.0f,0.0f,0.0f},
 		{0.0f,0.0f,0.0f},
 	};
-
-	Transform transforms[kNumInstance];
+	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+	Particle particles[kNumInstance];
 	for (uint32_t index = 0; index < kNumInstance; ++index)
 	{
-		transforms[index].scale = { 1.0f, 1.0f, 1.0f };
-		transforms[index].rotate = { 0.0f, 0.0f, 0.0f };
-		transforms[index].translate = { index * 0.1f, index * 0.1f, index * 0.1f };
+		particles[index].transform.scale = { 1.0f, 1.0f, 1.0f };
+		particles[index].transform.rotate = { 0.0f, 0.0f, 0.0f };
+		particles[index].transform.translate = { distribution(randomEngine),distribution(randomEngine),distribution(randomEngine)};
+		particles[index].velocity = {distribution(randomEngine),distribution(randomEngine) ,distribution(randomEngine) };
 	}
 	
 
@@ -2081,9 +2090,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			
 
 			//パーティクル用
+			const float kDeltaTime = 1.0f / 60.0f;
 			for (uint32_t index = 0; index < kNumInstance; ++index)
 			{
-				Matrix4x4 worldMatrixP = MakeAffineMatrix(transforms[index].scale, transforms[index].rotate, transforms[index].translate);
+				particles[index].transform.translate.x += particles[index].velocity.x * kDeltaTime;
+				particles[index].transform.translate.y += particles[index].velocity.y * kDeltaTime;
+				particles[index].transform.translate.z += particles[index].velocity.z * kDeltaTime;
+				Matrix4x4 worldMatrixP = MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
 				Matrix4x4 worldViewProjectionMatirxP = Multiply(worldMatrixP,Multiply(viewMatrix,projectionMatrix));
 				instancingData[index].WVP = worldViewProjectionMatirxP;
 				instancingData[index].World = worldMatrixP;
