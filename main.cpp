@@ -467,12 +467,12 @@ struct FormatChunk
 	ChunkHeader chunk;
 	WAVEFORMATEX fmt;
 };
-struct SoundData
-{
-	WAVEFORMATEX wfex;
-	BYTE* pBuffer;
-	unsigned int bufferSize;
-};
+//struct SoundData
+//{
+//	WAVEFORMATEX wfex;
+//	BYTE* pBuffer;
+//	unsigned int bufferSize;
+//};
 void Log(std::ostream& os, const std::string& message)
 {
 	os << message << std::endl;
@@ -859,98 +859,91 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const Microsoft::WRL::ComPtr<
 	handleGPU.ptr += (descriptorSize * index);
 	return handleGPU;
 }
-void SoundUnload(SoundData* soundData)
-{
-	//バッファのメモリ
-	delete[] soundData->pBuffer;
-
-	soundData->pBuffer = 0;
-	soundData->bufferSize = 0;
-	soundData->wfex = {};
-}
-void SoundPlayWave(IXAudio2* xAudio2, const SoundData& soundData)
-{
-	HRESULT result;
-
-	//波形フォーマットを元にsoundvoiceの生成
-	IXAudio2SourceVoice* pSourceVoice = nullptr;
-	result = xAudio2->CreateSourceVoice(&pSourceVoice, &soundData.wfex);
-	assert(SUCCEEDED(result));
-
-	//再生する波形データの設定
-	XAUDIO2_BUFFER buf{};
-	buf.pAudioData = soundData.pBuffer;
-	buf.AudioBytes = soundData.bufferSize;
-	buf.Flags = XAUDIO2_END_OF_STREAM;
-
-	//波形データの再生
-	result = pSourceVoice->SubmitSourceBuffer(&buf);
-	result = pSourceVoice->Start();
-}
-SoundData SoundLoadWave(const char* filename)
-{
-	
-	//ファイル入力ストリームのインスタンス
-	std::ifstream file;
-	//wavファイルをバイナリモードで開く
-	file.open(filename, std::ios_base::binary);
-	//ファイルオープン失敗を検出する
-	assert(file.is_open());
-
-	//RIFFヘッダーの読み込み
-	RiffHeader riff;
-	file.read((char*)&riff, sizeof(riff));
-	//ファイルがriffかチェック
-	if (strncmp(riff.chunk.id, "RIFF", 4) != 0)
-	{
-		assert(0);
-	}
-	//タイプがwaveかチェック
-	if (strncmp(riff.type, "WAVE", 4) != 0)
-	{
-		assert(0);
-	}
-	//formatチャンクの読み込み
-	FormatChunk format = {};
-	//チャンクヘッダーの確認
-	file.read((char*)&format, sizeof(ChunkHeader));
-	if (strncmp(format.chunk.id, "fmt ", 4) != 0)
-	{
-		assert(0);
-	}
-	//チャンク本体の読み込み
-	assert(format.chunk.size <= sizeof(format.fmt));
-	file.read((char*)&format.fmt, format.chunk.size);
-	//Dataチャンクの読み込み
-	ChunkHeader data;
-	file.read((char*)&data, sizeof(data));
-	//junkチャンクを検出した場合
-	if (strncmp(data.id, "JUNK", 4) == 0)
-	{
-		//読み取り位置をjunkチャンクの終わりまで進める
-		file.seekg(data.size, std::ios_base::cur);
-		file.read((char*)&data, sizeof(data));
-	}
-	if (strncmp(data.id, "data", 4) != 0)
-	{
-		assert(0);
-	}
-	//dataチャンクのデータ部（波形データ）の読み込み
-	char* pBuffer = new char[data.size];
-	file.read(pBuffer, data.size);
-
-	//waveファイルを閉じる
-	file.close();
-
-	SoundData soundData = {};
-
-	soundData.wfex = format.fmt;
-	soundData.pBuffer = reinterpret_cast<BYTE*>(pBuffer);
-	soundData.bufferSize = data.size;
-
-	return soundData;
-
-}
+//void SoundUnload(SoundData* soundData)
+//{
+//	//バッファのメモリ
+//	delete[] soundData->pBuffer;
+//
+//	soundData->pBuffer = 0;
+//	soundData->bufferSize = 0;
+//	soundData->wfex = {};
+//}
+//void SoundPlayWave(IXAudio2* xAudio2, const SoundData& soundData)
+//{
+//	HRESULT result;
+//
+//	//波形フォーマットを元にsoundvoiceの生成
+//	IXAudio2SourceVoice* pSourceVoice = nullptr;
+//	result = xAudio2->CreateSourceVoice(&pSourceVoice, &soundData.wfex);
+//	assert(SUCCEEDED(result));
+//
+//	//再生する波形データの設定
+//	XAUDIO2_BUFFER buf{};
+//	buf.pAudioData = soundData.pBuffer;
+//	buf.AudioBytes = soundData.bufferSize;
+//	buf.Flags = XAUDIO2_END_OF_STREAM;
+//
+//	//波形データの再生
+//	result = pSourceVoice->SubmitSourceBuffer(&buf);
+//	result = pSourceVoice->Start();
+//}
+//SoundData SoundLoadWave(const char* filename)
+//{
+//	
+//	//ファイル入力ストリームのインスタンス
+//	std::ifstream file;
+//	//wavファイルをバイナリモードで開く
+//	file.open(filename, std::ios_base::binary);
+//	//ファイルオープン失敗を検出する
+//	assert(file.is_open());
+//
+//	//RIFFヘッダーの読み込み
+//	RiffHeader riff;
+//	file.read((char*)&riff, sizeof(riff));
+//	//ファイルがriffかチェック
+//	if (strncmp(riff.chunk.id, "RIFF", 4) != 0)
+//	{
+//		assert(0);
+//	}
+//	//タイプがwaveかチェック
+//	if (strncmp(riff.type, "WAVE", 4) != 0)
+//	{
+//		assert(0);
+//	}
+//	//formatチャンクの読み込み
+//	FormatChunk format = {};
+//	//チャンクヘッダーの確認
+//	file.read((char*)&format, sizeof(ChunkHeader));
+//	if (strncmp(format.chunk.id, "fmt ", 4) != 0)
+//	{
+//		assert(0);
+//	}
+//	//チャンク本体の読み込み
+//	assert(format.chunk.size <= sizeof(format.fmt));
+//	file.read((char*)&format.fmt, format.chunk.size);
+//	//Dataチャンクの読み込み
+//	ChunkHeader data;
+//	file.read((char*)&data, sizeof(data));
+//	//junkチャンクを検出した場合
+//	if (strncmp(data.id, "JUNK", 4) == 0)
+//	{
+//		//読み取り位置をjunkチャンクの終わりまで進める
+//		file.seekg(data.size, std::ios_base::cur);
+//		file.read((char*)&data, sizeof(data));
+//	}
+//	if (strncmp(data.id, "data", 4) != 0)
+//	{
+//		assert(0);
+//	}
+//	//dataチャンクのデータ部（波形データ）の読み込み
+//	char* pBuffer = new char[data.size];
+//	file.read(pBuffer, data.size);
+//
+//	//waveファイルを閉じる
+//	file.close();
+//
+//	
+//}
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 
@@ -968,8 +961,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	result = xAudio2->CreateMasteringVoice(&masterVoice);
 	assert(SUCCEEDED(result));
 
-	SoundData soundData1 = SoundLoadWave("resources/loop100203.wav");
-	SoundPlayWave(xAudio2.Get(), soundData1);
+	
 
 	
 
@@ -1891,7 +1883,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	Transform transformObj{ {1.5f, 1.5f, 1.5f},{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
 
-	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
+	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.3f,3.14f,0.0f}, {0.0f,4.0f,10.0f} };
 
 	Transform cameraTransformObj{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
 
@@ -2092,7 +2084,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			for (uint32_t index = 0; index < kNumInstance; ++index)
 			{
 				Matrix4x4 worldMatrixP = MakeAffineMatrix(transforms[index].scale, transforms[index].rotate, transforms[index].translate);
-				Matrix4x4 worldViewProjectionMatirxP = Multiply(worldMatrix, worldViewProjectionMatirxP);
+				Matrix4x4 worldViewProjectionMatirxP = Multiply(worldMatrixP,Multiply(viewMatrix,projectionMatrix));
 				instancingData[index].WVP = worldViewProjectionMatirxP;
 				instancingData[index].World = worldMatrixP;
 			}
@@ -2192,7 +2184,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
 			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 			
-			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+			//commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 			
 			
 
@@ -2283,7 +2275,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	xAudio2.Reset();
 
-	SoundUnload(&soundData1);
+	
 	
 
 	//警告時に止まる
