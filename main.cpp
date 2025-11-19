@@ -1426,7 +1426,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 					//// ImGuiの内部コマンドを生成する
-					//ImGui::Render();
+					ImGui::Render();
 					//// これから書き込むバックバッファのインデックスを取得
 					//UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 

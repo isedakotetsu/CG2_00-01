@@ -94,7 +94,7 @@ void DirectXCommon::deviceInitialize()
 	assert(device != nullptr);
 	//Logger::Log(logstream, "complete create D3D12Device!!!\n");
 #ifdef _DEBUG
-	Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
+	    ID3D12InfoQueue* infoQueue = nullptr;
 	if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
 	{
 		//やばいエラー時に止まる
