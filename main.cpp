@@ -1019,7 +1019,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//ウィンドウの生成
 	HWND hwnd = CreateWindow(
 		wc.lpszClassName,//利用するクラス名
-		L"CG2",//タイトルバーの文字
+		L"LE2C_06_イセダ_コテツ",//タイトルバーの文字
 		WS_OVERLAPPEDWINDOW,//よく見るウィンドスタイル
 		CW_USEDEFAULT,//表示x座標
 		CW_USEDEFAULT,//表示y座標
@@ -1252,14 +1252,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	rootParameters2[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う
 	rootParameters2[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//PixelShaderで使う
 	rootParameters2[0].Descriptor.ShaderRegister = 0;//レジスタ番号０とバインド
+
 	rootParameters2[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;//descriptorTableを使う
 	rootParameters2[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;//VertexShaderで使う
 	rootParameters2[1].DescriptorTable.pDescriptorRanges = descriptorRangeForInstancing2;
 	rootParameters2[1].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing2);
+
 	rootParameters2[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;//descriptorTableを使う
 	rootParameters2[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//pixelshaderで使う
 	rootParameters2[2].DescriptorTable.pDescriptorRanges = descriptorRange2;//tableの中身の配列を指定
 	rootParameters2[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange2);//tableで利用する数
+
 	rootParameters2[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う
 	rootParameters2[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//pixelshdaderで使う
 	rootParameters2[3].Descriptor.ShaderRegister = 1;//レジスタ番号1を使う
