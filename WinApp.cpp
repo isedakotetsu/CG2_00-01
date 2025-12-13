@@ -1,3 +1,4 @@
+#pragma comment(lib, "winmm.lib")
 #include "WinApp.h"
 #include "externals/imgui/imgui.h"
 
@@ -25,6 +26,8 @@ LRESULT CALLBACK WinApp::WindowProc(HWND hwnd, UINT msg,
 
 void WinApp::Initialize()
 {
+	timeBeginPeriod(1);
+
 	HRESULT hr = CoInitializeEx(0, COINIT_MULTITHREADED);
 
 
