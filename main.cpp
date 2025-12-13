@@ -34,6 +34,8 @@
 #include "WinApp.h"
 #include "DirectXCommon.h"
 #include "D3DResourceLeakChecker.h"
+#include "SpriteCommon.h"
+#include "Sprite.h"
 
 
 
@@ -598,6 +600,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	dxCommon = new DirectXCommon();
 	dxCommon->Initialize(winApp);
+
+	SpriteCommon* spriteCommon = nullptr;
+	//スプライト共通部の初期化
+	spriteCommon = new SpriteCommon;
+	spriteCommon->Initialize();
+
+	Sprite* sprite = new Sprite();
+	sprite->Initialize();
 
 	
 
@@ -1338,6 +1348,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			
 			winApp->Finalize();
 			delete winApp;
+
+			delete spriteCommon;
+			delete sprite;
 
 			
 
