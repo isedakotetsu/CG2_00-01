@@ -8,6 +8,7 @@ void SpriteCommon::Initialize(DirectXCommon* dxCommon)
 	GraphicsPipeline();
 }
 
+
 void SpriteCommon::RootSignature()
 {
 	//RootSignature作成
@@ -186,8 +187,31 @@ void SpriteCommon::GraphicsPipeline()
 	graphicsPirelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	//実際に生成
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
+	
 	hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&graphicsPirelineStateDesc,
 		IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
+}
+
+void SpriteCommon::CommonRenderState()
+{
+
+	// マテリアルCBufferの場所を設定
+	dxCommon_->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+		0, materialResourceSprite->GetGPUVirtualAddress());
+
+	dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
+
+
+	// Spriteの描画。変更が必要なものだけ変更する
+	dxCommon_->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewSprite); // WBVを設定
+	// TransformationMatirxCBufferの場所を設定
+	dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+		1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
+
+	// 描画！（DrawCall/ドローコール)
+	dxCommon_->GetCommandList()->IASetIndexBuffer(&indexBufferViewSprite);//IBVを設定
+
 }

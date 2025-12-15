@@ -1268,6 +1268,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					dxCommon->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
 					dxCommon->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
 					dxCommon->GetCommandList()->IASetIndexBuffer(&indexBufferView);
+
+
 					// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
 					dxCommon->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
@@ -1309,6 +1311,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					
 
 					// マテリアルCBufferの場所を設定
+					dxCommon->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
 						0, materialResourceSprite->GetGPUVirtualAddress());
 
