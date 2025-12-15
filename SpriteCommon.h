@@ -9,6 +9,7 @@ public:
 
 	DirectXCommon* GetDxCommon() const { return dxCommon_; }
 private:
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
 
 	DirectXCommon* dxCommon_;
 
