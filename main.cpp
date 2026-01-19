@@ -846,34 +846,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	wvpDataObj->WVP = MakeIdentity4x4();
 
 
-	
-
-	
-
-
-
-	//sprite用の頂点リソースを作る
-	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResourceSprite = dxCommon->CreateBufferResource(dxCommon->GetDevice(), sizeof(VertexData) * 6);
-
-	//頂点バッファビューを作成する
-	D3D12_VERTEX_BUFFER_VIEW vertexBufferViewSprite{};
-	//リソースの先頭のアドレスから使う
-	vertexBufferViewSprite.BufferLocation = vertexResourceSprite->GetGPUVirtualAddress();
-	//使用するリソースのサイズは頂点6つ文のサイズ
-	vertexBufferViewSprite.SizeInBytes = sizeof(VertexData) * 6;
-	//1頂点あたりのサイズ
-	vertexBufferViewSprite.StrideInBytes = sizeof(VertexData);
-
-	//sprite用のtransformationMatrix用のリソースを作る。matrix4x4　1つ分のサイズを用意する
-	Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResourceSprite = dxCommon->CreateBufferResource(dxCommon->GetDevice(), sizeof(TransformationMatrix));
-	//データを書き込む
-	TransformationMatrix* transformationMatrixDataSprite = nullptr;
-	//書き込むためのアドレスを取得
-	transformationMatrixResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixDataSprite));
-	//単位行列を書き込んでおく
-	transformationMatrixDataSprite->WVP = MakeIdentity4x4();
-
-
 
 	int32_t kSubdivision = 16;
 	uint32_t vertexCount = (kSubdivision + 1) * (kSubdivision + 1);
@@ -933,23 +905,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	*transformationMatrixDataShere = MakeIdentity4x4();
 
 
-	VertexData* vertexDataSprite = nullptr;
-	//一枚目の三角形
-	vertexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataSprite));
-	assert(SUCCEEDED(hr));
-	vertexDataSprite[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };//左下
-	vertexDataSprite[0].texcoord = { 0.0f, 1.0f };
-	vertexDataSprite[0].normal = { 0.0f, 0.0f, -1.0f };
-	vertexDataSprite[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };//左上
-	vertexDataSprite[1].texcoord = { 0.0f, 0.0f };
-	vertexDataSprite[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };//右下
-	vertexDataSprite[2].texcoord = { 1.0f, 1.0f };
-	vertexDataSprite[3].position = { 640.0f, 0.0f, 0.0f, 1.0f };//右上
-	vertexDataSprite[3].texcoord = { 1.0f, 0.0f };
-
-
-
-
 	
 
 	
@@ -976,20 +931,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//単位行列を書き込んでおく
 	wvpData->WVP = MakeIdentity4x4();
 
-	//Sprite用のマテリアルリソースを作る
-	Microsoft::WRL::ComPtr<ID3D12Resource> materialResourceSprite = dxCommon->CreateBufferResource(dxCommon->GetDevice(), sizeof(Material));
-	//マテリアルにデータを書き込む
-	Material* materialDataSprite = nullptr;
-	//書き込むためのアドレスを取得
-	materialResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&materialDataSprite));
-	//白を書き込んでみる
-	*materialDataSprite = {};
-	materialDataSprite->color = Vector4{1.0f, 1.0f, 1.0f,1.0f};
-	materialDataSprite->enableLighting = 1;
-	materialDataSprite->uvTransform = MakeIdentity4x4();
 
-	materialDataSprite->enableLighting = false;
 
+	
 	
 
 	//平行光源用のリソースを作る
@@ -1004,25 +948,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	directionnalLightData->direction = { 0.0f, -1.0f, 0.0f };
 	directionnalLightData->intensity = 1.0f;
 
-
-
-	Microsoft::WRL::ComPtr<ID3D12Resource> indexResourceSprite = dxCommon->CreateBufferResource(dxCommon->GetDevice(), sizeof(uint32_t) * 6);
-
-	D3D12_INDEX_BUFFER_VIEW indexBufferViewSprite{};
-	//リソースの先頭のアドレスから使う
-	indexBufferViewSprite.BufferLocation = indexResourceSprite->GetGPUVirtualAddress();
-	//使用するリソースのサイズはインデックス６つ分のサイズ
-	indexBufferViewSprite.SizeInBytes = sizeof(uint32_t) * 6;
-	indexBufferViewSprite.Format = DXGI_FORMAT_R32_UINT;
-
-	uint32_t* indexResourceData = nullptr;
-	indexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&indexResourceData));
-	indexResourceData[0] = 0;
-	indexResourceData[1] = 1;
-	indexResourceData[2] = 2;
-	indexResourceData[3] = 1;
-	indexResourceData[4] = 3;
-	indexResourceData[5] = 2;
 
 	
 	Microsoft::WRL::ComPtr<ID3D12Resource> indexSphereResource = dxCommon->CreateBufferResource(dxCommon->GetDevice(), sizeof(uint32_t) * indexCount);
@@ -1072,16 +997,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	Transform cameraTransformObj{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
 
-
-	Transform transformSprite{ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
-
-	
-
 	Transform uvTransformSprite{
 		{1.0f,1.0f,1.0f},
 		{0.0f,0.0f,0.0f},
 		{0.0f,0.0f,0.0f},
 	};
+	
 
 	
 	
@@ -1310,8 +1231,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 				
 					
 
-					// マテリアルCBufferの場所を設定
-					dxCommon->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					
+					//共通描画設定
+					spriteCommon->CommonRenderState();
 
 					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
 						0, materialResourceSprite->GetGPUVirtualAddress());
