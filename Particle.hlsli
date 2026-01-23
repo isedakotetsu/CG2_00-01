@@ -33,3 +33,8 @@ struct DirectionalLight
     float32_t3 direction; //ライトの向き
     float intensity; //輝度
 };
+
+struct Camera
+{
+    float32_t3 worldPosition;
+};

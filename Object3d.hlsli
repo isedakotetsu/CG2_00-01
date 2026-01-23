@@ -3,6 +3,7 @@ struct VertexShaderOutput
     float32_t4 position : SV_POSITION;
     float32_t2 texcoord : TEXCOORD0;
     float32_t3 normal : NORMAL0;
+    float32_t3 worldPosition : POSITION0;
     
 };
 struct VertexShaderInput
@@ -25,6 +26,7 @@ struct Material
     float32_t4 color;
     int32_t enableLighting;
     float32_t4x4 uvTransform;
+    float32_t shininess;
 };
 
 struct DirectionalLight
@@ -32,4 +34,9 @@ struct DirectionalLight
     float32_t4 color; //ライトの色
     float32_t3 direction; //ライトの向き
     float intensity; //輝度
+};
+
+struct Camera
+{
+    float32_t3 worldPosition;
 };

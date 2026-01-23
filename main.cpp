@@ -90,6 +90,7 @@ struct Material
 	int32_t enableLighting;
 	float padding[3];
 	Matrix4x4 uvTransform;
+	float shininess;
 };
 struct TransformationMatrix
 {
@@ -105,6 +106,7 @@ struct DirectionalLight
 struct MaterialData
 {
 	std::string textureFilePath;
+	
 };
 struct ModelData
 {
@@ -116,7 +118,10 @@ struct Particle
 	Transform transform;
 	Vector3 velocity;
 };
-
+struct cameraForGPU
+{
+	Vector3 worldPosition;
+};
 
 //正射影行列
 Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip)
@@ -867,91 +872,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const Microsoft::WRL::ComPtr<
 	handleGPU.ptr += (descriptorSize * index);
 	return handleGPU;
 }
-//void SoundUnload(SoundData* soundData)
-//{
-//	//バッファのメモリ
-//	delete[] soundData->pBuffer;
-//
-//	soundData->pBuffer = 0;
-//	soundData->bufferSize = 0;
-//	soundData->wfex = {};
-//}
-//void SoundPlayWave(IXAudio2* xAudio2, const SoundData& soundData)
-//{
-//	HRESULT result;
-//
-//	//波形フォーマットを元にsoundvoiceの生成
-//	IXAudio2SourceVoice* pSourceVoice = nullptr;
-//	result = xAudio2->CreateSourceVoice(&pSourceVoice, &soundData.wfex);
-//	assert(SUCCEEDED(result));
-//
-//	//再生する波形データの設定
-//	XAUDIO2_BUFFER buf{};
-//	buf.pAudioData = soundData.pBuffer;
-//	buf.AudioBytes = soundData.bufferSize;
-//	buf.Flags = XAUDIO2_END_OF_STREAM;
-//
-//	//波形データの再生
-//	result = pSourceVoice->SubmitSourceBuffer(&buf);
-//	result = pSourceVoice->Start();
-//}
-//SoundData SoundLoadWave(const char* filename)
-//{
-//	
-//	//ファイル入力ストリームのインスタンス
-//	std::ifstream file;
-//	//wavファイルをバイナリモードで開く
-//	file.open(filename, std::ios_base::binary);
-//	//ファイルオープン失敗を検出する
-//	assert(file.is_open());
-//
-//	//RIFFヘッダーの読み込み
-//	RiffHeader riff;
-//	file.read((char*)&riff, sizeof(riff));
-//	//ファイルがriffかチェック
-//	if (strncmp(riff.chunk.id, "RIFF", 4) != 0)
-//	{
-//		assert(0);
-//	}
-//	//タイプがwaveかチェック
-//	if (strncmp(riff.type, "WAVE", 4) != 0)
-//	{
-//		assert(0);
-//	}
-//	//formatチャンクの読み込み
-//	FormatChunk format = {};
-//	//チャンクヘッダーの確認
-//	file.read((char*)&format, sizeof(ChunkHeader));
-//	if (strncmp(format.chunk.id, "fmt ", 4) != 0)
-//	{
-//		assert(0);
-//	}
-//	//チャンク本体の読み込み
-//	assert(format.chunk.size <= sizeof(format.fmt));
-//	file.read((char*)&format.fmt, format.chunk.size);
-//	//Dataチャンクの読み込み
-//	ChunkHeader data;
-//	file.read((char*)&data, sizeof(data));
-//	//junkチャンクを検出した場合
-//	if (strncmp(data.id, "JUNK", 4) == 0)
-//	{
-//		//読み取り位置をjunkチャンクの終わりまで進める
-//		file.seekg(data.size, std::ios_base::cur);
-//		file.read((char*)&data, sizeof(data));
-//	}
-//	if (strncmp(data.id, "data", 4) != 0)
-//	{
-//		assert(0);
-//	}
-//	//dataチャンクのデータ部（波形データ）の読み込み
-//	char* pBuffer = new char[data.size];
-//	file.read(pBuffer, data.size);
-//
-//	//waveファイルを閉じる
-//	file.close();
-//
-//	
-//}
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 
@@ -960,20 +881,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 	SetUnhandledExceptionFilter(ExposrtDump);
 
-	//サウンド
-	Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
-	IXAudio2MasteringVoice* masterVoice;
-
-	HRESULT result = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
-	assert(SUCCEEDED(result));
-	result = xAudio2->CreateMasteringVoice(&masterVoice);
-	assert(SUCCEEDED(result));
-
-	
-
-	
-
-	
 
 	//log出力用のフォルダ[logs]作成
 	std::filesystem::create_directory("logs");
@@ -1405,7 +1312,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 	//RootParameter作成。複数設定できるので配列。今回は結果１つだけなので長さ１の配列
-	D3D12_ROOT_PARAMETER rootParameters[4] = {};
+	D3D12_ROOT_PARAMETER rootParameters[5] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//PixelShaderで使う
 	rootParameters[0].Descriptor.ShaderRegister = 0;//レジスタ番号０とバインド
@@ -1419,6 +1326,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う
 	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//pixelshdaderで使う
 	rootParameters[3].Descriptor.ShaderRegister = 1;//レジスタ番号1を使う
+	rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; 
+	rootParameters[4].Descriptor.ShaderRegister = 2;
 	descriptionRootSignature.pParameters = rootParameters;//ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);//配列の長さ
 
@@ -1539,10 +1449,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(hr));
 
 
-	ModelData modelData = LoadObjFile("resources", "plane.obj");
+
 
 	
-	
+	ModelData modelData = LoadObjFile("resources", "plane.obj");
 
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
@@ -1619,6 +1529,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	materialDataObj->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	materialDataObj->enableLighting = true;
 	materialDataObj->uvTransform = MakeIdentity4x4();
+	
 
 
 	//WVP用のリソースを作る。matrix4x4　1つ分のサイズを用意する
@@ -1787,6 +1698,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	materialData->color = Vector4 (1.0f, 1.0f, 1.0f, 1.0f);
 	materialData->enableLighting = true;
 	materialData->uvTransform = MakeIdentity4x4();
+	materialData->shininess = 15.0f;
 
 
 	//WVP用のリソースを作る。matrix4x4　1つ分のサイズを用意する
@@ -1826,6 +1738,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	directionnalLightData->color = { 1.0f, 1.0f, 1.0f ,1.0f};
 	directionnalLightData->direction = { 0.0f, -1.0f, 0.0f };
 	directionnalLightData->intensity = 1.0f;
+
+	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.3f,3.14f,0.0f}, {0.0f,4.0f,10.0f} };
+
+	//camera用のマテリアルリソースを作る
+	Microsoft::WRL::ComPtr<ID3D12Resource> cameraResource = CreateBufferResource(device, sizeof(cameraForGPU));
+	//マテリアルにデータを書き込む
+	cameraForGPU* cameraData = nullptr;
+	//書き込むためのアドレスを取得
+	cameraResource->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
+	//白を書き込んでみる
+	*cameraData = {};
+	cameraData->worldPosition = cameraTransform.translate;
+	
 
 
 
@@ -1891,7 +1816,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	Transform transformObj{ {1.5f, 1.5f, 1.5f},{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
 
-	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.3f,3.14f,0.0f}, {0.0f,4.0f,10.0f} };
+	
 
 	Transform cameraTransformObj{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
 
@@ -1927,7 +1852,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
 		srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 	//textureを読んで転送する
-	DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
+	DirectX::ScratchImage mipImages = LoadTexture("resources/monsterBall.png");
 	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
 	Microsoft::WRL::ComPtr<ID3D12Resource> textureResource = CreateTextureResource(device, metadata);
 	Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource = UploadTextureData(textureResource, mipImages, device, commandList);
@@ -2171,7 +2096,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			commandList->SetGraphicsRootConstantBufferView(
 				1, wvpResource->GetGPUVirtualAddress());
 
-			
+			commandList->SetGraphicsRootConstantBufferView(4, cameraResource->GetGPUVirtualAddress());
 			// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
 			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 			//平行光源用CBufferの場所を設定
@@ -2180,7 +2105,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			
 			// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 			
-			//commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+			commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 						
 
 			// RootSignatureを設定。PSOに設定しているけど別途設定が必要
@@ -2220,7 +2145,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			// 描画！（DrawCall/ドローコール)
 			commandList->IASetIndexBuffer(&indexBufferViewSprite);//IBVを設定
-	       // commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	        //commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 			
 
 			//パーティクル用
@@ -2230,7 +2155,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			commandList->SetGraphicsRootConstantBufferView(0, materialResourceObj->GetGPUVirtualAddress());
 			commandList->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU);
 			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
-			commandList->DrawInstanced(UINT(modelData.vertices.size()), kNumInstance, 0, 0);
+			//commandList->DrawInstanced(UINT(modelData.vertices.size()), kNumInstance, 0, 0);
 			
 
 			// 実際のcommandListのImGuiの描画コマンドを積む
@@ -2286,7 +2211,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 	CloseWindow(hwnd);
 
-	xAudio2.Reset();
+	
 
 	
 	
