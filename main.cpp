@@ -55,27 +55,6 @@ struct Matrix3x3
 	float m[3][3];
 };
 
-struct Vector4
-{
-	float x;
-	float y;
-	float z;
-	float w;
-
-};
-struct Vector3
-{
-	float x;
-	float y;
-	float z;
-
-
-};
-struct Vector2
-{
-	float x;
-	float y;
-};
 struct Transform
 {
 	Vector3 scale;
@@ -607,7 +586,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	spriteCommon->Initialize(dxCommon);
 
 	Sprite* sprite = new Sprite();
-	sprite->Initialize();
+	sprite->Initialize(spriteCommon);
 
 	
 
@@ -997,11 +976,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	Transform cameraTransformObj{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
 
-	Transform uvTransformSprite{
+	/*Transform uvTransformSprite{
 		{1.0f,1.0f,1.0f},
 		{0.0f,0.0f,0.0f},
 		{0.0f,0.0f,0.0f},
-	};
+	};*/
 	
 
 	
@@ -1073,6 +1052,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		} else {
 			// ゲーム処理
 			input->Update();
+			sprite->Update();
+
+			/*Sprite::Vector2 position = sprite->GetPosition();
+			position.x += 0.1f;
+			position.y += 0.1f;
+			sprite->SetPosition(position);*/
+
+			float rotation = sprite->GetRotation();
+			rotation += 0.01f;
+			sprite->SetRotation(rotation);
+
+			Vector4 color = sprite->GetColor();
+			color.x += 0.01f;
+			if (color.x > 1.0f)
+			{
+				color.x -= 1.0f;
+			}
+			sprite->SetColor(color);
+
 			if (input->TriggerKey(DIK_0))
 			{
 				OutputDebugStringA("Hit 0\n");
@@ -1086,12 +1084,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			ImGui::Begin("Window");
 			ImGui::ColorEdit3("color", &(materialData->color.x));
-			ImGui::SliderFloat3("translateSprite", &transformSprite.translate.x, 0.0f, 600.0f);
+			ImGui::SliderFloat3("translateSprite", &transform.translate.x, 0.0f, 600.0f);
 			ImGui::Checkbox("useMosterBall", &useMonsterBall);
 			ImGui::SliderFloat3("Light", &directionnalLightData->direction.x, -1.0f, 0.8f);
-			ImGui::DragFloat2("uvTranslate", &uvTransformSprite.translate.x, 0.01f, -10.0f, 10.0f);
-			ImGui::DragFloat2("uvcale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
-			ImGui::SliderAngle("uvRotate", &uvTransformSprite.rotate.z);
+			//ImGui::DragFloat2("uvTranslate", &uvTransformSprite.translate.x, 0.01f, -10.0f, 10.0f);
+			//ImGui::DragFloat2("uvcale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
+			//ImGui::SliderAngle("uvRotate", &uvTransformSprite.rotate.z);
 			ImGui::SliderAngle("SphereRotate", &transform.rotate.y);
 			ImGui::SliderAngle("SphereScale", &transform.scale.y);
 			ImGui::SliderAngle("Spheretranslate", &transform.translate.y);
@@ -1124,30 +1122,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			Matrix4x4 worldViewProjectionMatrix =
 				Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 
-			Matrix4x4 uvTransformMatrix = MakeScaleMatrix(uvTransformSprite.scale);
+			/*Matrix4x4 uvTransformMatrix = MakeScaleMatrix(uvTransformSprite.scale);
 			uvTransformMatrix = Multiply(uvTransformMatrix, MakeRotateZMatrix(uvTransformSprite.rotate.z));
 			uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
-			materialDataSprite->uvTransform = uvTransformMatrix;
+			materialDataSprite->uvTransform = uvTransformMatrix;*/
 
 
 			wvpData->WVP = worldViewProjectionMatrix;
 			wvpData->World = worldMatrix;
-
-
-			// Sprite用のWorldViewProjectionMatrixを作る
-			Matrix4x4 worldMatrixSprite =
-				MakeAffineMatrix(transformSprite.scale, transformSprite.rotate,
-					transformSprite.translate);
-			Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
-			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(
-				0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
-			Matrix4x4 worldViewProjectionMatrixSprite =
-				Multiply(worldMatrixSprite,
-					Multiply(viewMatrixSprite, projectionMatrixSprite));
-
-			transformationMatrixDataSprite->World = worldMatrixSprite;
-			transformationMatrixDataSprite->WVP = worldViewProjectionMatrixSprite;
-
 
 
 			//Obj用
@@ -1206,7 +1188,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					
 					// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 					
-					dxCommon->GetCommandList()->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+					//dxCommon->GetCommandList()->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 								
 
 					// RootSignatureを設定。PSOに設定しているけど別途設定が必要
@@ -1223,7 +1205,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
 					dxCommon->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 					
-					dxCommon->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+					//dxCommon->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 					
 					
 
@@ -1234,24 +1216,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					
 					//共通描画設定
 					spriteCommon->CommonRenderState();
-
-					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
-						0, materialResourceSprite->GetGPUVirtualAddress());
-
-					dxCommon->GetCommandList()->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
-
-
-					// Spriteの描画。変更が必要なものだけ変更する
-					dxCommon->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewSprite); // WBVを設定
-					// TransformationMatirxCBufferの場所を設定
-					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
-						1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
-
-					// 描画！（DrawCall/ドローコール)
-					dxCommon->GetCommandList()->IASetIndexBuffer(&indexBufferViewSprite);//IBVを設定
-			        dxCommon->GetCommandList()->DrawIndexedInstanced(6, 1, 0, 0, 0);
-					
-					
+					sprite->Draw();
 
 					// 実際のdxCommon->GetCommandList()のImGuiの描画コマンドを積む
 					ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon->GetCommandList());

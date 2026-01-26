@@ -4,13 +4,23 @@
 void Sprite::Initialize(SpriteCommon* spriteCommon)
 {
 	this->spriteCommon = spriteCommon;
+
+	dxCommon_ = spriteCommon->GetDxCommon();  
+	assert(dxCommon_);
+
 	CreateVertexData();
 	CreateMaterial();
 	CreateTransformMatrix();
+
+	textureSrvHandleGPU = dxCommon_->GetSRVGPUDescriptorHandle(1);
 }
+
 
 void Sprite::Update()
 {
+	transformSprite.translate = { position.x, position.y, 0.0f };
+	transformSprite.rotate = { 0.0f,0.0f, rotation };
+
 	//一枚目の三角形
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	assert(SUCCEEDED(hr));
@@ -24,15 +34,15 @@ void Sprite::Update()
 	vertexData[3].position = { 640.0f, 0.0f, 0.0f, 1.0f };//右上
 	vertexData[3].texcoord = { 1.0f, 0.0f };
 
+	
 	indexResource->Map(0, nullptr, reinterpret_cast<void**>(&indexResourceData));
+	assert(SUCCEEDED(hr));
 	indexResourceData[0] = 0;
 	indexResourceData[1] = 1;
 	indexResourceData[2] = 2;
 	indexResourceData[3] = 1;
 	indexResourceData[4] = 3;
 	indexResourceData[5] = 2;
-
-	Transform transformSprite{ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
 
 	// Sprite用のWorldViewProjectionMatrixを作る
 	Matrix4x4 worldMatrixSprite =
@@ -45,10 +55,24 @@ void Sprite::Update()
 		Multiply(worldMatrixSprite,
 			Multiply(viewMatrixSprite, projectionMatrixSprite));
 
-	transformationMatrixDataSprite->World = worldMatrixSprite;
-	transformationMatrixDataSprite->WVP = worldViewProjectionMatrixSprite;
+	transformationMatrixData->World = worldMatrixSprite;
+	transformationMatrixData->WVP = worldViewProjectionMatrixSprite;
 
 	
+}
+
+void Sprite::Draw()
+{
+	dxCommon_->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView); // WBVを設定
+	dxCommon_->GetCommandList()->IASetIndexBuffer(&indexBufferView);//IBVを設定
+	dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+		0, materialResource->GetGPUVirtualAddress());
+	dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+		1, transformationMatrixResource->GetGPUVirtualAddress());
+	dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
+	// 描画！（DrawCall/ドローコール)
+	dxCommon_->GetCommandList()->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
 }
 
 void Sprite::CreateVertexData()
