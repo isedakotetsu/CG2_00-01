@@ -55,6 +55,10 @@ public:
 	const Vector4& GetColor() const { return materialData->color; }
 	void SetColor(const Vector4& color) { materialData->color = color; }
 
+	//サイズ
+	const Vector2& GetSize() const { return size; }
+	void SetSize(const Vector2& size) { this->size = size; }
+
 private:
 	SpriteCommon* spriteCommon = nullptr;
 
@@ -288,6 +292,10 @@ private:
 
 	Vector2 position = { 0.0f, 0.0f };
 	float rotation = 0.0f;
+
+	Vector2 size = { 640.0f, 360.0f };
+
+
 
 	void CreateVertexData();
 	void CreateMaterial();

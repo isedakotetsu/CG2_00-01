@@ -588,6 +588,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	Sprite* sprite = new Sprite();
 	sprite->Initialize(spriteCommon);
 
+	std::vector<Sprite*> sprites;
+	for (uint32_t i = 0; i < 5; ++i)
+	{
+		Sprite* sprite = new Sprite();
+		sprite->Initialize(spriteCommon);
+
+		sprite->SetSize({ 64.0f, 64.0f });
+		sprite->SetPosition({ 50.0f + 100.0f * i, 50.0f });
+
+		sprites.push_back(sprite);
+	}
+
 	
 
 	//log出力用のフォルダ[logs]作成
@@ -1053,15 +1065,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			// ゲーム処理
 			input->Update();
 			sprite->Update();
+			for (auto* sp : sprites)
+			{
+				sp->Update();
+			}
 
 			/*Sprite::Vector2 position = sprite->GetPosition();
 			position.x += 0.1f;
 			position.y += 0.1f;
 			sprite->SetPosition(position);*/
 
-			float rotation = sprite->GetRotation();
+			/*float rotation = sprite->GetRotation();
 			rotation += 0.01f;
-			sprite->SetRotation(rotation);
+			sprite->SetRotation(rotation);*/
+
+			Vector2 size = sprite->GetSize();
+			size.x += 0.1f;
+			size.y += 0.1f;
+			sprite->SetSize(size);
 
 			Vector4 color = sprite->GetColor();
 			color.x += 0.01f;
@@ -1216,7 +1237,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					
 					//共通描画設定
 					spriteCommon->CommonRenderState();
-					sprite->Draw();
+					//sprite->Draw();
+					for (auto* sp : sprites) 
+					{
+						sp->Draw();
+					}
 
 					// 実際のdxCommon->GetCommandList()のImGuiの描画コマンドを積む
 					ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon->GetCommandList());
@@ -1242,8 +1267,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			delete spriteCommon;
 			delete sprite;
-
 			
+
+			for (auto* sp : sprites) 
+			{
+				delete sp;
+			}
+			
+
 
 
 

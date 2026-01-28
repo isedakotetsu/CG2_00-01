@@ -20,19 +20,23 @@ void Sprite::Update()
 {
 	transformSprite.translate = { position.x, position.y, 0.0f };
 	transformSprite.rotate = { 0.0f,0.0f, rotation };
+	transformSprite.scale = { size.x, size.y, 1.0f };
 
 	//一枚目の三角形
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	assert(SUCCEEDED(hr));
-	vertexData[0].position = { 0.0f, 360.0f, 0.0f, 1.0f };//左下
+	vertexData[0].position = { 0.0f, 1.0f, 0.0f, 1.0f };//左下
 	vertexData[0].texcoord = { 0.0f, 1.0f };
 	vertexData[0].normal = { 0.0f, 0.0f, -1.0f };
 	vertexData[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };//左上
 	vertexData[1].texcoord = { 0.0f, 0.0f };
-	vertexData[2].position = { 640.0f, 360.0f, 0.0f, 1.0f };//右下
+	vertexData[1].normal   = { 0.0f, 0.0f, -1.0f };
+	vertexData[2].position = { 1.0f, 1.0f, 0.0f, 1.0f };//右下
 	vertexData[2].texcoord = { 1.0f, 1.0f };
-	vertexData[3].position = { 640.0f, 0.0f, 0.0f, 1.0f };//右上
+	vertexData[2].normal   = { 0.0f, 0.0f, -1.0f };
+	vertexData[3].position = { 1.0f, 0.0f, 0.0f, 1.0f };//右上
 	vertexData[3].texcoord = { 1.0f, 0.0f };
+	vertexData[3].normal   = { 0.0f, 0.0f, -1.0f };
 
 	
 	indexResource->Map(0, nullptr, reinterpret_cast<void**>(&indexResourceData));
