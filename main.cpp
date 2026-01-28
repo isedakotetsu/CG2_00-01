@@ -36,6 +36,7 @@
 #include "D3DResourceLeakChecker.h"
 #include "SpriteCommon.h"
 #include "Sprite.h"
+#include "TextureManager.h"
 
 
 
@@ -579,6 +580,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	dxCommon = new DirectXCommon();
 	dxCommon->Initialize(winApp);
+
+	TextureManager::GetInstance()->Initialize();
 
 	SpriteCommon* spriteCommon = nullptr;
 	//スプライト共通部の初期化
@@ -1259,6 +1262,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 			
 			delete input;
+
+			TextureManager::GetInstance()->finalize();
 
 			delete dxCommon;
 			

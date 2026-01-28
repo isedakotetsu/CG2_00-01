@@ -53,7 +53,7 @@ public:
 		IDxcCompiler3* dxcCompiler,
 		IDxcIncludeHandler* includeHandler,
 		std::ostream& os);
-
+	static const uint32_t kMaxSRVCount;
 	
 private:
 	//FPS固定初期化
@@ -116,6 +116,10 @@ private:
 
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+
+	
+
+	
 
 	
 
