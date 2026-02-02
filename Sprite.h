@@ -4,6 +4,7 @@
 #include <wrl.h>
 #include <cmath>
 #include "Vector.h"
+#include <string>
 class SpriteCommon;
 class DirectXCommon;
 class Sprite
@@ -41,7 +42,7 @@ public:
 		Vector3 translate;
 	};
 
-	void Initialize(SpriteCommon* spriteCommon);
+	void Initialize(SpriteCommon* spriteCommon, std::string textureFilePath);
 	void Update();
 	void Draw();
 	//座標
@@ -58,6 +59,25 @@ public:
 	//サイズ
 	const Vector2& GetSize() const { return size; }
 	void SetSize(const Vector2& size) { this->size = size; }
+	//アンカーポイント
+	void SetAnchorPoint(const Vector2& anchorPoint) { this->anchorPoint = anchorPoint; }
+	const Vector2& GetAnchorPoint() const { return anchorPoint; }
+	//フリップ
+	bool getFlipX() const {return isFlipX_;}
+	void setFlipX(bool isFlipX) { this->isFlipX_ = isFlipX; }
+
+	bool getFlipY() const {return isFlipY_;}
+
+	void setFlipY(bool isFlipY) {this->isFlipY_ = isFlipY;}
+
+	void SetTextureLeftTop(const Vector2& textureLeftTop) { this->textureLeftTop = textureLeftTop; }
+	const Vector2& GetTextureLeftTop() const { return textureLeftTop; }
+
+	void SettextureSize(const Vector2& textureSize) { this->textureSize = textureSize; }
+	const Vector2& GetTextureSize() const { return textureSize; }
+
+
+
 
 private:
 	SpriteCommon* spriteCommon = nullptr;
@@ -295,8 +315,19 @@ private:
 
 	Vector2 size = { 640.0f, 360.0f };
 
+	uint32_t textureIndex = 0;
 
+	Vector2 anchorPoint = { 0.5f, 0.5f };
 
+	Vector2 textureLeftTop = { 0.0f, 0.0f };
+	Vector2 textureSize = { 64.0f, 64.0f };
+
+	bool isFlipX_ = false;
+	bool isFlipY_ = false;
+
+	
+
+	void AdjustTextureSize();
 	void CreateVertexData();
 	void CreateMaterial();
 	void CreateTransformMatrix();

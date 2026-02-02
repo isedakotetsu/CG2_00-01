@@ -1,18 +1,22 @@
 #include "Sprite.h"
 #include "SpriteCommon.h"
+#include "TextureManager.h"
 
-void Sprite::Initialize(SpriteCommon* spriteCommon)
+void Sprite::Initialize(SpriteCommon* spriteCommon, std::string textureFilePath)
 {
 	this->spriteCommon = spriteCommon;
 
 	dxCommon_ = spriteCommon->GetDxCommon();  
-	assert(dxCommon_);
+
 
 	CreateVertexData();
 	CreateMaterial();
 	CreateTransformMatrix();
 
-	textureSrvHandleGPU = dxCommon_->GetSRVGPUDescriptorHandle(1);
+	
+	
+	textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(textureFilePath);
+	AdjustTextureSize();
 }
 
 
@@ -22,20 +26,41 @@ void Sprite::Update()
 	transformSprite.rotate = { 0.0f,0.0f, rotation };
 	transformSprite.scale = { size.x, size.y, 1.0f };
 
+	float left = 0.0f - anchorPoint.x;
+	float right = 1.0f - anchorPoint.x;
+	float top = 0.0f - anchorPoint.y;
+	float bottom = 1.0f - anchorPoint.y;
+
+	if (isFlipX_)
+	{
+		left = -left;
+		right = -right;
+	}
+	if (isFlipY_)
+	{
+		top =  -top;
+		bottom = -bottom;
+	}
+	const DirectX::TexMetadata& metadata =
+		TextureManager::GetInstance()->GetMetaData(textureIndex);
+	float tex_left = textureLeftTop.x / metadata.width;
+	float tex_right = (textureLeftTop.x + textureSize.x) / metadata.width;
+	float tex_top = textureLeftTop.y / metadata.height;
+	float tex_bottom = (textureLeftTop.y + textureSize.y) / metadata.height;
 	//一枚目の三角形
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	assert(SUCCEEDED(hr));
-	vertexData[0].position = { 0.0f, 1.0f, 0.0f, 1.0f };//左下
-	vertexData[0].texcoord = { 0.0f, 1.0f };
+	vertexData[0].position = { left, bottom, 0.0f, 1.0f };//左下
+	vertexData[0].texcoord = { tex_left, tex_bottom };
 	vertexData[0].normal = { 0.0f, 0.0f, -1.0f };
-	vertexData[1].position = { 0.0f, 0.0f, 0.0f, 1.0f };//左上
-	vertexData[1].texcoord = { 0.0f, 0.0f };
+	vertexData[1].position = { left, top, 0.0f, 1.0f };//左上
+	vertexData[1].texcoord = { tex_left, tex_top };
 	vertexData[1].normal   = { 0.0f, 0.0f, -1.0f };
-	vertexData[2].position = { 1.0f, 1.0f, 0.0f, 1.0f };//右下
-	vertexData[2].texcoord = { 1.0f, 1.0f };
+	vertexData[2].position = { right, bottom, 0.0f, 1.0f };//右下
+	vertexData[2].texcoord = { tex_right,tex_bottom};
 	vertexData[2].normal   = { 0.0f, 0.0f, -1.0f };
-	vertexData[3].position = { 1.0f, 0.0f, 0.0f, 1.0f };//右上
-	vertexData[3].texcoord = { 1.0f, 0.0f };
+	vertexData[3].position = { right, top, 0.0f, 1.0f };//右上
+	vertexData[3].texcoord = { tex_right, tex_top };
 	vertexData[3].normal   = { 0.0f, 0.0f, -1.0f };
 
 	
@@ -73,9 +98,22 @@ void Sprite::Draw()
 		0, materialResource->GetGPUVirtualAddress());
 	dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
 		1, transformationMatrixResource->GetGPUVirtualAddress());
-	dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
+	dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(textureIndex));
 	// 描画！（DrawCall/ドローコール)
 	dxCommon_->GetCommandList()->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+}
+
+void Sprite::AdjustTextureSize()
+{
+	const DirectX::TexMetadata& metadata = TextureManager::GetInstance()->GetMetaData(textureIndex);
+
+	textureSize.x = static_cast<float>(metadata.width);
+	textureSize.y = static_cast<float>(metadata.height);
+	//画像サイズをテクスチャサイズに合わせる
+	size = textureSize;
+
+
 
 }
 

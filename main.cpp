@@ -581,25 +581,40 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	dxCommon = new DirectXCommon();
 	dxCommon->Initialize(winApp);
 
-	TextureManager::GetInstance()->Initialize();
+	TextureManager::GetInstance()->Initialize(dxCommon);
 
 	SpriteCommon* spriteCommon = nullptr;
 	//スプライト共通部の初期化
 	spriteCommon = new SpriteCommon;
 	spriteCommon->Initialize(dxCommon);
 
+	TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
+	TextureManager::GetInstance()->LoadTexture("resources/monsterball.png");
+
+
+	std::vector<std::string> textures = {
+  "resources/uvChecker.png",
+  "resources/monsterball.png"
+	};
 	Sprite* sprite = new Sprite();
-	sprite->Initialize(spriteCommon);
+	sprite->Initialize(spriteCommon, "resources/uvChecker.png");
+	sprite->SetPosition({ 500.0f, 500.0f });
+	
+	sprite->setFlipX(true);
+	sprite->setFlipY(false);
 
-	std::vector<Sprite*> sprites;
-	for (uint32_t i = 0; i < 5; ++i)
-	{
+	std::vector<Sprite* >sprites;
+	for (uint32_t i = 0; i < 6; ++i) {
 		Sprite* sprite = new Sprite();
-		sprite->Initialize(spriteCommon);
-
+		// 2つの画像を交互に割り当てるために、i % 2でインデックスを切り替え
+		std::string& textureFile = textures[i % 2];
+		sprite->Initialize(spriteCommon, textureFile);
+		/*sprite->SetIsFlipX(false);
+		sprite->SetIsFlipY(false);
+		sprite->SetTextureLeftTop({ 0.0f, 0.0f });
+		sprite->SetTextureSize({ 64.0f, 64.0f });*/
 		sprite->SetSize({ 64.0f, 64.0f });
-		sprite->SetPosition({ 50.0f + 100.0f * i, 50.0f });
-
+		sprite->SetPosition({ 100.0f + i * 200.0f, 100.0f });
 		sprites.push_back(sprite);
 	}
 
@@ -999,48 +1014,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 
 	
-	
-
-	
-
-	
-	//textureを読んで転送する
-	DirectX::ScratchImage mipImages = dxCommon->LoadTexture("resources/uvChecker.png");
-	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
-	Microsoft::WRL::ComPtr<ID3D12Resource> textureResource = dxCommon->CreateTextureResource(dxCommon->GetDevice(), metadata);
-	Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource = dxCommon->UploadTextureData(textureResource, mipImages, dxCommon->GetDevice(), dxCommon->GetCommandList());
-
-	////metadataを基にsrvの設定
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	srvDesc.Format = metadata.format;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;//2Dテクスチャ
-	srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
-
-
-	//2枚目のtextureを読んで転送する
-	DirectX::ScratchImage mipImages2 = dxCommon->LoadTexture(modelData.material.textureFilePath);
-	const DirectX::TexMetadata& metadata2 = mipImages2.GetMetadata();
-	Microsoft::WRL::ComPtr<ID3D12Resource> textureResource2 = dxCommon->CreateTextureResource(dxCommon->GetDevice(), metadata2);
-	Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource2 = dxCommon->UploadTextureData(textureResource2, mipImages2, dxCommon->GetDevice(), dxCommon->GetCommandList());
-
-	////metadataを基にsrvの設定
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc2{};
-	srvDesc2.Format = metadata2.format;
-	srvDesc2.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc2.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;//2Dテクスチャ
-	srvDesc2.Texture2D.MipLevels = UINT(metadata2.mipLevels);
-
-	
-	////関数化（descriptorSize)
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = dxCommon->GetSRVCPUDescriptorHandle(1);
-	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = dxCommon->GetSRVGPUDescriptorHandle(1);
-
-	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 =  dxCommon->GetSRVGPUDescriptorHandle(2);
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 =  dxCommon->GetSRVCPUDescriptorHandle(2);
-	//SRVの生成
-	dxCommon->GetDevice()->CreateShaderResourceView(textureResource.Get(), &srvDesc, textureSrvHandleCPU);
-	dxCommon->GetDevice()->CreateShaderResourceView(textureResource2.Get(), &srvDesc2, textureSrvHandleCPU2);
 	//利用するheapの設定非常に特殊な運用
 	D3D12_HEAP_PROPERTIES heapProperties{};
 	heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
@@ -1068,32 +1041,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			// ゲーム処理
 			input->Update();
 			sprite->Update();
-			for (auto* sp : sprites)
-			{
-				sp->Update();
-			}
+			//for (Sprite* sprite : sprites)
+			//{
+			//	sprite->Update();
 
-			/*Sprite::Vector2 position = sprite->GetPosition();
-			position.x += 0.1f;
-			position.y += 0.1f;
-			sprite->SetPosition(position);*/
+				/*Sprite::Vector2 position = sprite->GetPosition();
+				position.x += 0.1f;
+				position.y += 0.1f;
+				sprite->SetPosition(position);*/
 
-			/*float rotation = sprite->GetRotation();
-			rotation += 0.01f;
-			sprite->SetRotation(rotation);*/
+				/*float rotation = sprite->GetRotation();
+				rotation += 0.01f;
+				sprite->SetRotation(rotation);*/
 
-			Vector2 size = sprite->GetSize();
-			size.x += 0.1f;
-			size.y += 0.1f;
-			sprite->SetSize(size);
+				/*Vector2 size = sprite->GetSize();
+				size.x += 0.1f;
+				size.y += 0.1f;
+				sprite->SetSize(size);
 
-			Vector4 color = sprite->GetColor();
-			color.x += 0.01f;
-			if (color.x > 1.0f)
-			{
-				color.x -= 1.0f;
-			}
-			sprite->SetColor(color);
+				Vector4 color = sprite->GetColor();
+				color.x += 0.01f;
+				if (color.x > 1.0f)
+				{
+					color.x -= 1.0f;
+				}
+				sprite->SetColor(color);*/
+			//}
 
 			if (input->TriggerKey(DIK_0))
 			{
@@ -1190,45 +1163,45 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					
 					//  // PSOを設定
 					
-					// RootSignatureを設定。PSOに設定しているけど別途設定が必要
-					dxCommon->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
-					dxCommon->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
-					dxCommon->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
-					dxCommon->GetCommandList()->IASetIndexBuffer(&indexBufferView);
+					//// RootSignatureを設定。PSOに設定しているけど別途設定が必要
+					//dxCommon->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
+					//dxCommon->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
+					//dxCommon->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewShere);
+					//dxCommon->GetCommandList()->IASetIndexBuffer(&indexBufferView);
 
 
-					// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
-					dxCommon->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
-						0, materialResource->GetGPUVirtualAddress());
-					// wvp用のCBufferの場所を設定
-					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
-						1, wvpResource->GetGPUVirtualAddress());
-					// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
-					dxCommon->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
-					//平行光源用CBufferの場所を設定
-					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
-						3, directionnalLightResource->GetGPUVirtualAddress());
+					//// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
+					//dxCommon->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					//dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
+					//	0, materialResource->GetGPUVirtualAddress());
+					//// wvp用のCBufferの場所を設定
+					//dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
+					//	1, wvpResource->GetGPUVirtualAddress());
+					//// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
+					//dxCommon->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall ?  : textureSrvHandleGPU);
+					////平行光源用CBufferの場所を設定
+					//dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
+					//	3, directionnalLightResource->GetGPUVirtualAddress());
 					
 					// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 					
 					//dxCommon->GetCommandList()->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 								
 
-					// RootSignatureを設定。PSOに設定しているけど別途設定が必要
-					dxCommon->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
-					dxCommon->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
-					dxCommon->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
-					// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
-					dxCommon->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
-						0, materialResourceObj->GetGPUVirtualAddress());
-					// wvp用のCBufferの場所を設定
-					dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
-						1, wvpResourceObj->GetGPUVirtualAddress());
-					// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
-					dxCommon->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
-					
+					//// RootSignatureを設定。PSOに設定しているけど別途設定が必要
+					//dxCommon->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
+					//dxCommon->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
+					//dxCommon->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
+					//// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
+					//dxCommon->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					//dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
+					//	0, materialResourceObj->GetGPUVirtualAddress());
+					//// wvp用のCBufferの場所を設定
+					//dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(
+					//	1, wvpResourceObj->GetGPUVirtualAddress());
+					//// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
+					//dxCommon->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
+					//
 					//dxCommon->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 					
 					
@@ -1240,16 +1213,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					
 					//共通描画設定
 					spriteCommon->CommonRenderState();
-					//sprite->Draw();
-					for (auto* sp : sprites) 
+					sprite->Draw();
+					/*for (auto* sp : sprites) 
 					{
 						sp->Draw();
-					}
+					}*/
 
 					// 実際のdxCommon->GetCommandList()のImGuiの描画コマンドを積む
 					ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon->GetCommandList());
 
 					dxCommon->PostDraw();
+					TextureManager::GetInstance()->ReleaseAllUploadResources();
 
 				}
 

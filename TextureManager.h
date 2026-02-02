@@ -11,11 +11,19 @@ class TextureManager
 {
 public:
 	static TextureManager* GetInstance();
-	void Initialize();
+	void Initialize(DirectXCommon*dxCommon);
 	//終了
 	void finalize();
 
 	void LoadTexture(const std::string& filePath);
+
+	void ReleaseAllUploadResources();
+
+	uint32_t GetTextureIndexByFilePath(const std::string& filePath);
+
+	D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU(uint32_t textureIndex);
+
+	const DirectX::TexMetadata& GetMetaData(uint32_t textureIndex);
 
 private:
 	static TextureManager* instance;
@@ -26,14 +34,25 @@ private:
 	TextureManager& operator=(TextureManager&) = delete;
 
 	DirectXCommon* dxCommon_;
-	struct TextureData
+
+	struct TextureData 
 	{
 		std::string filePath;
-		DirectX::TexMetadata metadata;
+		DirectX::TexMetadata metadata{};
 		Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-		D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU;
-		D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU;
-
+		Microsoft::WRL::ComPtr<ID3D12Resource> uploadResource;
+		D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU{};
+		D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU{};
+		uint32_t srvIndex = 0; 
 	};
+
+
 	std::vector<TextureData> textureDatas;
+
+	static uint32_t kSRVIndexTop;
+
+	
+	
+
+
 };

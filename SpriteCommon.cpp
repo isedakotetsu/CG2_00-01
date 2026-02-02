@@ -191,7 +191,7 @@ void SpriteCommon::GraphicsPipeline()
 	//ResiterzeStateの設定
 	D3D12_RASTERIZER_DESC rasterizerDescSprite{};
 	//裏面（時計回り）を表示しない
-	rasterizerDescSprite.CullMode = D3D12_CULL_MODE_BACK;
+	rasterizerDescSprite.CullMode = D3D12_CULL_MODE_NONE;
 	//三角形の中を塗りつぶす
 	rasterizerDescSprite.FillMode = D3D12_FILL_MODE_SOLID;
 
